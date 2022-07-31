@@ -4,12 +4,17 @@ import util.ByteUtils;
 
 import java.util.Arrays;
 
+import static java.util.Arrays.copyOfRange;
+import static util.ByteUtils.bytesToLong;
+import static util.ByteUtils.longToBytes;
+
 public class MarketData {
 
+    private static final int OBJ_SIZE = 28;
     private volatile byte[] data;
 
     public MarketData() {
-        data = new byte[28];
+        data = new byte[OBJ_SIZE];
     }
 
     public void setData(byte[] data) {
@@ -17,19 +22,19 @@ public class MarketData {
     }
 
     public String getSecurity() {
-        return ByteUtils.bytesToCharSeq(Arrays.copyOfRange(data, 2, 18));
+        return ByteUtils.bytesToCharSeq(copyOfRange(data, 2, 18));
     }
 
     public double getPrice() {
-        return (double) ByteUtils.bytesToLong(Arrays.copyOfRange(data, 19, 27)) / 1000;
+        return (double) bytesToLong(copyOfRange(data, 19, 27)) / 1000;
     }
 
     public int side() {
-       return Arrays.copyOfRange(data, 1, 2)[0];
+       return copyOfRange(data, 1, 2)[0];
     }
 
     public boolean isFirm() {
-        return Arrays.copyOfRange(data, 0, 1)[0] == 1;
+        return copyOfRange(data, 0, 1)[0] == 1;
     }
 
     public void setSecurity(String id) {
@@ -47,7 +52,7 @@ public class MarketData {
     }
 
     public void setPrice(double price) {
-        byte[] bytes = ByteUtils.longToBytes((long) (price * 1000));
+        byte[] bytes = longToBytes((long) (price * 1000));
         for (int i =0,j=19; i < bytes.length; i++,j++) {
             data[j] = bytes[i];
         }
@@ -69,4 +74,10 @@ public class MarketData {
     public String toString() {
         return "MarketData{" + "data= " +getSecurity() +"-" + getPrice() +"-"+ side() +"-"+ isFirm() +"}";
     }
+
+
+    public int size() {
+        return OBJ_SIZE;
+    }
+
 }

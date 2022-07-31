@@ -10,6 +10,7 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 public class MMFQueue {
 
+    public static final int QUEUE_SIZE = 100_000_000;
 
     private final MappedByteBuffer[] buffers;
     private final int objSize;
@@ -33,8 +34,8 @@ public class MMFQueue {
         buffers = new MappedByteBuffer[numberOfBuffers];
         maxLength = bufferObjCapacity * numberOfBuffers;
 
-        randomAccessFile = new RandomAccessFile("/Users/abbas/" + name + ".txt", "rw");
-        contextBuffer = new RandomAccessFile("/Users/abbas/" + name + "-context.txt", "rw").getChannel().map(READ_WRITE, 0, 8);
+        randomAccessFile = new RandomAccessFile("/tmp/" + name + ".txt", "rw");
+        contextBuffer = new RandomAccessFile("/tmp/" + name + "-context.txt", "rw").getChannel().map(READ_WRITE, 0, 8);
         writeIndex = reread ? 0 : contextBuffer.getInt(0);
         readIndex = reread ? 0 : contextBuffer.getInt(4);
 
@@ -97,5 +98,9 @@ public class MMFQueue {
 
     public long getSize() {
         return writeIndex;
+    }
+
+    public static MMFQueue getInstance(int objSize) throws IOException {
+        return new MMFQueue(objSize, QUEUE_SIZE, "FAST_QUEUE", true);
     }
 }

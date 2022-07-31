@@ -1,29 +1,28 @@
 package marketdata.producer;
 
 import model.MarketData;
-import model.MarketDataPool;
 import queue.MMFQueue;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.stream.IntStream;
+
+import static java.lang.System.nanoTime;
+import static queue.MMFQueue.QUEUE_SIZE;
 
 public class QueueProducer {
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException {
 
+        MarketData marketData = new MarketData();
+        MMFQueue mmfQueue = MMFQueue.getInstance(marketData.size());
 
-        MarketDataPool marketDataPool = new MarketDataPool(10_000);
-        MMFQueue mmfQueue = null;
-        mmfQueue = new MMFQueue(marketDataPool.objSize(), 100_000_000, "FAST_QUEUE", true);
-
-        long startTime = System.nanoTime();
-        for (int j = 0; j < 100_000_000; j++) {
-            Optional<MarketData> marketData = marketDataPool.get("US2012DN", 101.12d + j, j % 2 == 0 ? 0 : 1, j % 2 == 0);
-            mmfQueue.add(marketData.get().getData());
-            marketDataPool.ret(marketData.get());
-        }
-
-        System.out.println(System.nanoTime() - startTime);
+        long startTime = nanoTime();
+        IntStream.range(0, QUEUE_SIZE).forEach(j -> {
+            marketData.set("US2012DN", 101.12d + j, j % 2 == 0 ? 0 : 1, j % 2 == 0);
+            mmfQueue.add(marketData.getData());
+            //System.out.println(marketData);
+        });
+        System.out.println((nanoTime() - startTime)/1000_000+" ms");
         System.out.println(mmfQueue.getSize());
     }
 }
