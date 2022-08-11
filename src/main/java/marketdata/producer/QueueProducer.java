@@ -18,7 +18,7 @@ public class QueueProducer {
 
         long startTime = nanoTime();
         IntStream.range(0, QUEUE_SIZE).forEach(j -> {
-            marketData.set("US2012DN", 101.12d + j, j % 2 == 0 ? 0 : 1, j % 2 == 0);
+            marketData.set("US2012DN31313HK11", 101.12d + j, j % 2 == 0 ? 0 : 1, j % 2 == 0);
             mmfQueue.add(marketData.getData());
             //System.out.println(marketData);
         });

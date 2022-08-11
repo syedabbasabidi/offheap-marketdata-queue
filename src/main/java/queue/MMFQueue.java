@@ -15,15 +15,16 @@ public class MMFQueue {
     private final MappedByteBuffer[] buffers;
     private final int objSize;
     private final long queueSize;
-    private final RandomAccessFile randomAccessFile;
-    private final FileChannel fileChannel;
+    private final RandomAccessFile queue;
+    private final RandomAccessFile queueWriterContext;
+    private final RandomAccessFile queueReaderContext;
     private final int bufferObjCapacity;
-    private final int maxLength;
-    private final MappedByteBuffer contextBuffer;
+    private final MappedByteBuffer writerContextBuffer;
+    private final MappedByteBuffer readerContextBuffer;
     private volatile int writeIndex;
     private volatile int readIndex;
 
-    public MMFQueue(int objSize, int queueSize, String name, boolean reread) throws IOException {
+    public MMFQueue(int objSize, int queueSize, String name, boolean reset) throws IOException {
 
         this.objSize = objSize;
         this.queueSize = queueSize;
@@ -32,15 +33,17 @@ public class MMFQueue {
         long sizeInBytes = (long) objSize * queueSize;
         int numberOfBuffers = (int) Math.ceil((double) sizeInBytes / (double) Integer.MAX_VALUE);
         buffers = new MappedByteBuffer[numberOfBuffers];
-        maxLength = bufferObjCapacity * numberOfBuffers;
 
-        randomAccessFile = new RandomAccessFile("/tmp/" + name + ".txt", "rw");
-        contextBuffer = new RandomAccessFile("/tmp/" + name + "-context.txt", "rw").getChannel().map(READ_WRITE, 0, 8);
-        writeIndex = reread ? 0 : contextBuffer.getInt(0);
-        readIndex = reread ? 0 : contextBuffer.getInt(4);
+        queue = new RandomAccessFile("/tmp/" + name + ".txt", "rw");
+        queueWriterContext = new RandomAccessFile("/tmp/" + name + "-context.txt", "rw");
+        queueReaderContext = new RandomAccessFile("/tmp/" + name + "-reader-context.txt", "rw");
+        writerContextBuffer = queueWriterContext.getChannel().map(READ_WRITE, 0, 4);
+        readerContextBuffer = queueReaderContext.getChannel().map(READ_WRITE, 0, 4);
+        writeIndex = reset ? 0 : writerContextBuffer.getInt(0);
+        readIndex = reset ? 0 : readerContextBuffer.getInt(0);
 
 
-        fileChannel = randomAccessFile.getChannel();
+        FileChannel fileChannel = queue.getChannel();
         for (int i = 0; i < numberOfBuffers; i++) {
             buffers[i] = fileChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
         }
@@ -50,7 +53,9 @@ public class MMFQueue {
 
     private int getBuffer(int index) {
         int ret = index / bufferObjCapacity;
-        if (ret >= buffers.length) {throw new IndexOutOfBoundsException("Index doesn't exist");}
+        if (ret >= buffers.length) {
+            throw new IndexOutOfBoundsException("Index doesn't exist");
+        }
 
         return ret;
     }
@@ -71,29 +76,31 @@ public class MMFQueue {
 
 
     public Optional<byte[]> get() {
-        writeIndex = contextBuffer.getInt(0);
+        writeIndex = writerContextBuffer.getInt(0);
         return Optional.ofNullable(readIndex < writeIndex ? get(readIndex) : null);
     }
 
     public void add(byte[] object) {
 
-        if (writeIndex >= queueSize) {throw new IllegalStateException("Queue is full");}
+        if (writeIndex >= queueSize) {
+            throw new IllegalStateException("Queue is full");
+        }
 
         MappedByteBuffer buffer = buffers[getBuffer(writeIndex)];
         buffer.position(getIndexWithinBuffer(writeIndex));
         buffer.put(object, 0, object.length);
-        updateWriter();
+        updateWriterContext();
         writeIndex++; // flush store buffers
 
     }
 
-    private void updateWriter() {
-        contextBuffer.putInt(0, writeIndex + 1);
-        readIndex = contextBuffer.getInt(4);
+    private void updateWriterContext() {
+        writerContextBuffer.putInt(0, writeIndex + 1);
+        readIndex = readerContextBuffer.getInt(0);
     }
 
     private void updateReaderContext() {
-        contextBuffer.putInt(4, readIndex + 1);
+        readerContextBuffer.putInt(0, readIndex + 1);
     }
 
     public long getSize() {
@@ -102,5 +109,14 @@ public class MMFQueue {
 
     public static MMFQueue getInstance(int objSize) throws IOException {
         return new MMFQueue(objSize, QUEUE_SIZE, "FAST_QUEUE", true);
+    }
+
+    public void shutdown() {
+        try {
+            queue.close();
+            queueWriterContext.close();
+        } catch (IOException e) {
+            System.out.println("Failed to close underlying file" + e);
+        }
     }
 }
