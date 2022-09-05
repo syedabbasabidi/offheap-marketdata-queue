@@ -15,7 +15,8 @@ public class JLBHMMFQueue implements JLBHTask {
 
     public static void main(String[] args) {
 
-        JLBHOptions jlbhOptions = new JLBHOptions().throughput(10_000_000).iterations(10_000_000-1_000).runs(10).warmUpIterations(10_000).recordOSJitter(true).jlbhTask(new JLBHMMFQueue());
+        JLBHOptions jlbhOptions = new JLBHOptions().throughput(10_000_000).iterations(10_000_000-1_000).runs(10).warmUpIterations(10_000)
+                                                   .recordOSJitter(true).jlbhTask(new JLBHMMFQueue());
         new JLBH(jlbhOptions).start();
     }
 

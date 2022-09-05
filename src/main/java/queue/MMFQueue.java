@@ -24,7 +24,7 @@ public class MMFQueue {
     private volatile int writeIndex;
     private volatile int readIndex;
 
-    public MMFQueue(int objSize, int queueSize, String name, boolean reset) throws IOException {
+    public MMFQueue(int objSize, int queueSize, String name, boolean redo) throws IOException {
 
         this.objSize = objSize;
         this.queueSize = queueSize;
@@ -39,8 +39,8 @@ public class MMFQueue {
         queueReaderContext = new RandomAccessFile("/tmp/" + name + "-reader-context.txt", "rw");
         writerContextBuffer = queueWriterContext.getChannel().map(READ_WRITE, 0, 4);
         readerContextBuffer = queueReaderContext.getChannel().map(READ_WRITE, 0, 4);
-        writeIndex = reset ? 0 : currentWriterIndex();
-        readIndex = reset ? 0 : currentReaderIndex();
+        writeIndex = redo ? 0 : currentWriterIndex();
+        readIndex = redo ? 0 : currentReaderIndex();
 
 
         FileChannel fileChannel = queue.getChannel();
