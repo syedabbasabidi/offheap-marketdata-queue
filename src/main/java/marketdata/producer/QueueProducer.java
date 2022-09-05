@@ -23,6 +23,6 @@ public class QueueProducer {
             //System.out.println(marketData);
         });
         System.out.println((nanoTime() - startTime)/1000_000+" ms");
-        System.out.println(mmfQueue.getSize());
+        System.out.println("Messages Written: "+mmfQueue.messagesWritten()+", Messages Read: "+mmfQueue.messagesRead());
     }
 }

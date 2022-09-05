@@ -8,7 +8,7 @@ import java.util.Optional;
 
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
-public class MMFQueue {
+public class MMFCircularQueue {
 
     public static final int QUEUE_SIZE = 100_000_000;
 
@@ -24,7 +24,7 @@ public class MMFQueue {
     private volatile int writeIndex;
     private volatile int readIndex;
 
-    public MMFQueue(int objSize, int queueSize, String name, boolean reset) throws IOException {
+    public MMFCircularQueue(int objSize, int queueSize, String name, boolean reset) throws IOException {
 
         this.objSize = objSize;
         this.queueSize = queueSize;
@@ -116,16 +116,12 @@ public class MMFQueue {
         return writerContextBuffer.getInt(0);
     }
 
-    public long messagesWritten() {
+    public long getSize() {
         return writeIndex;
     }
 
-    public long messagesRead() {
-        return readIndex;
-    }
-
-    public static MMFQueue getInstance(int objSize) throws IOException {
-        return new MMFQueue(objSize, QUEUE_SIZE, "FAST_QUEUE", true);
+    public static MMFCircularQueue getInstance(int objSize) throws IOException {
+        return new MMFCircularQueue(objSize, QUEUE_SIZE, "FAST_QUEUE", true);
     }
 
     public void shutdown() {

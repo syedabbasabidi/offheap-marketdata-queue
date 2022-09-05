@@ -21,6 +21,8 @@ public class QueueConsumer {
         range(0, QUEUE_SIZE).forEach(i -> mmfQueue.get().ifPresent(data -> process(marketData, i, data)));
         System.out.println((nanoTime() - startTime) / 1000_000 + " ms");
         System.out.println(arr[455]);
+        System.out.println("Messages Written: "+mmfQueue.messagesWritten()+", Messages Read: "+mmfQueue.messagesRead());
+
     }
 
     private static void process(MarketData marketData, int i, byte[] data) {
