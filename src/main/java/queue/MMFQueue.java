@@ -35,12 +35,12 @@ public class MMFQueue {
         buffers = new MappedByteBuffer[numberOfBuffers];
 
         queue = new RandomAccessFile("/tmp/" + name + ".txt", "rw");
-        queueWriterContext = new RandomAccessFile("/tmp/" + name + "-context.txt", "rw");
+        queueWriterContext = new RandomAccessFile("/tmp/" + name + "-writer-context.txt", "rw");
         queueReaderContext = new RandomAccessFile("/tmp/" + name + "-reader-context.txt", "rw");
         writerContextBuffer = queueWriterContext.getChannel().map(READ_WRITE, 0, 4);
         readerContextBuffer = queueReaderContext.getChannel().map(READ_WRITE, 0, 4);
-        writeIndex = reset ? 0 : writerContextBuffer.getInt(0);
-        readIndex = reset ? 0 : readerContextBuffer.getInt(0);
+        writeIndex = reset ? 0 : currentWriterIndex();
+        readIndex = reset ? 0 : currentReaderIndex();
 
 
         FileChannel fileChannel = queue.getChannel();
@@ -76,11 +76,13 @@ public class MMFQueue {
 
 
     public Optional<byte[]> get() {
-        writeIndex = writerContextBuffer.getInt(0);
-        return Optional.ofNullable(readIndex < writeIndex ? get(readIndex) : null);
+        writeIndex = currentWriterIndex();
+        return Optional.ofNullable(hasNext() ? get(readIndex) : null);
     }
 
     public void add(byte[] object) {
+
+        readIndex = currentReaderIndex();
 
         if (writeIndex >= queueSize) {
             throw new IllegalStateException("Queue is full");
@@ -94,13 +96,24 @@ public class MMFQueue {
 
     }
 
+    private int currentReaderIndex() {
+        return readerContextBuffer.getInt(0);
+    }
+
     private void updateWriterContext() {
         writerContextBuffer.putInt(0, writeIndex + 1);
-        readIndex = readerContextBuffer.getInt(0);
     }
 
     private void updateReaderContext() {
         readerContextBuffer.putInt(0, readIndex + 1);
+    }
+
+    private boolean hasNext() {
+        return readIndex < writeIndex;
+    }
+
+    private int currentWriterIndex() {
+        return writerContextBuffer.getInt(0);
     }
 
     public long getSize() {
