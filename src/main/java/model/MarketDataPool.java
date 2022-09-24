@@ -18,13 +18,13 @@ public class MarketDataPool {
 
     public Optional<MarketData> get(String secId, double price, int buy, boolean firm) {
         Optional<MarketData> marketData = get(null);
-        marketData.ifPresent(data -> data.set(secId, price, buy, firm));
+        marketData.ifPresent(data -> data.set(secId, price, buy, firm, (byte)1, "BRC", "2022-09-14:22:10:13"));
         return marketData;
     }
 
     public Optional<MarketData> getNew(String secId, double price, int buy, boolean firm) {
         MarketData marketData = new MarketData();
-        marketData.set(secId, price, buy, firm);
+        marketData.set(secId, price, buy, firm, (byte)1, "BRC", "2022-09-14:22:10:13");
         return Optional.of(marketData);
     }
 

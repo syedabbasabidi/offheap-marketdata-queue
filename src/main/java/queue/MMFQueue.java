@@ -8,7 +8,7 @@ import java.util.Optional;
 
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
-public class MMFQueue {
+public class MMFQueue { //13 messages per written micro second, 22 messages
 
     public static final int QUEUE_SIZE = 100_000_000;
 
@@ -81,8 +81,6 @@ public class MMFQueue {
     }
 
     public void add(byte[] object) {
-
-        readIndex = currentReaderIndex();
 
         if (writeIndex >= queueSize) {
             throw new IllegalStateException("Queue is full");

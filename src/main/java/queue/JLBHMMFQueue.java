@@ -25,7 +25,7 @@ public class JLBHMMFQueue implements JLBHTask {
         this.jlbh = jlbh;
         try {
             marketData = new MarketData();
-            marketData.set("US2012DN31313HK11", 101.12d, 1, true);
+            marketData.set("GB00BJLR0J16", 101.12d, 1, true, (byte)1, "BRC", "2022-09-14:22:10:13");
             mmfQueue = MMFQueue.getInstance(marketData.size());
         } catch (IOException e) {
             System.out.println("Queue initialization failed" + e);
