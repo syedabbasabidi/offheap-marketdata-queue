@@ -1,7 +1,5 @@
 package queue;
 
-import jnr.a64asm.OP;
-
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
@@ -78,8 +76,8 @@ public class CircularMMFQueue {
 
     public Optional<byte[]> get() {
 
-        if(isInResetMode()) {
-            readerContextBuffer.putInt(0,0);
+        if (isInResetMode()) {
+            readerContextBuffer.putInt(0, 0);
             readerContextBuffer.putInt(4, 1);
             readIndex = 0;
             return Optional.empty();
@@ -87,8 +85,8 @@ public class CircularMMFQueue {
         readerContextBuffer.putInt(4, 0);
 
         writeIndex = currentWriterIndex();
-        if(!hasNext()) {
-         //   System.out.println("Queue is empty");
+        if (!hasNext()) {
+            //   System.out.println("Queue is empty");
             return Optional.empty();
         }
         return Optional.of(get(readIndex));
@@ -97,10 +95,10 @@ public class CircularMMFQueue {
     public void add(byte[] object) {
 
 
-        if(isInResetMode())  {
-            if(hasReaderReset()) {
-                writerContextBuffer.putInt(0,0);
-                writerContextBuffer.putInt(4,0);
+        if (isInResetMode()) {
+            if (hasReaderReset()) {
+                writerContextBuffer.putInt(0, 0);
+                writerContextBuffer.putInt(4, 0);
                 writeIndex = 0;
             }
             return;
@@ -111,8 +109,8 @@ public class CircularMMFQueue {
             return;
         }
 
-        if(writeIndex >= queueSize) {
-         //   System.out.println("Queue is full");
+        if (writeIndex >= queueSize) {
+            //   System.out.println("Queue is full");
             return;
         }
 
@@ -130,7 +128,7 @@ public class CircularMMFQueue {
     }
 
     boolean hasReaderReset() {
-       return readerContextBuffer.getInt(4) == 1;
+        return readerContextBuffer.getInt(4) == 1;
     }
 
     boolean isInResetMode() {
