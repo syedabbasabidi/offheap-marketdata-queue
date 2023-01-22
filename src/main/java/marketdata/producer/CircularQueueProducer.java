@@ -21,7 +21,5 @@ public class CircularQueueProducer {
             mmfQueue.add(marketData.getData());
             j++;
         }
-//        System.out.println((nanoTime() - startTime)/1000_000+" ms");
-  //      System.out.println("Messages Written: "+mmfQueue.messagesWritten()+", Messages Read: "+mmfQueue.messagesRead());
     }
 }

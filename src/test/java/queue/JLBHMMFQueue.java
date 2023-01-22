@@ -7,6 +7,7 @@ import net.openhft.chronicle.jlbh.JLBHTask;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class JLBHMMFQueue implements JLBHTask {
@@ -15,11 +16,11 @@ public class JLBHMMFQueue implements JLBHTask {
     private MMFQueue mmfQueue;
     private MarketData marketData;
 
-    public ArrayList<Optional<byte[]>> ticks = new ArrayList(20_000_000);
+    public List<Optional<byte[]>> ticks = new ArrayList(20_000_000);
 
     public static void main(String[] args) {
 
-        JLBHOptions jlbhOptions = new JLBHOptions().throughput(5_000_000).iterations(4_000_000-20_000).runs(5).warmUpIterations(10_000).recordOSJitter(false).accountForCoordinatedOmission(true).jlbhTask(new JLBHMMFQueue());
+        JLBHOptions jlbhOptions = new JLBHOptions().throughput(5_000_000).iterations(4_000_000 - 20_000).runs(5).warmUpIterations(10_000).recordOSJitter(false).accountForCoordinatedOmission(true).jlbhTask(new JLBHMMFQueue());
         new JLBH(jlbhOptions).start();
     }
 
@@ -28,9 +29,9 @@ public class JLBHMMFQueue implements JLBHTask {
         this.jlbh = jlbh;
         try {
             marketData = new MarketData();
-            marketData.set("GB00BJLR0J16", 101.12d, 1, true, (byte)1, "BRC", "2022-09-14:22:10:13");
+            marketData.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13");
             mmfQueue = MMFQueue.getInstance(marketData.size());
-       //     mmfQueue.add(marketData.getData());
+            //     mmfQueue.add(marketData.getData());
         } catch (IOException e) {
             System.out.println("Queue initialization failed" + e);
         }
@@ -39,7 +40,7 @@ public class JLBHMMFQueue implements JLBHTask {
     @Override
     public void run(long startTimeNS) {
         consumer(startTimeNS);
-     //   producer(startTimeNS);
+        //   producer(startTimeNS);
     }
 
     private void producer(long startTimeNS) {
