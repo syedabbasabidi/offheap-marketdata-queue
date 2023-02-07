@@ -10,12 +10,7 @@ public class CircularQueueConsumer {
     private static MarketData arr[] = new MarketData[1000];
 
     public static void main(String[] args) throws IOException {
-
         start(false);
-        //System.out.println((nanoTime() - startTime) / 1000_000 + " ms");
-        //System.out.println(arr[455]);
-        //System.out.println("Messages Written: " + mmfQueue.messagesWritten() + ", Messages Read: " + mmfQueue.messagesRead());
-
     }
 
     public static void start(boolean log) {
@@ -26,7 +21,7 @@ public class CircularQueueConsumer {
         int i = 0;
         System.out.println("Reading to consume");
         while (true) {
-            if(Thread.interrupted()) {
+            if (Thread.interrupted()) {
                 System.out.println("Stopping Consumer");
                 break;
             }

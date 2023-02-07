@@ -9,7 +9,7 @@ import java.util.Optional;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 public class CircularMMFQueue {
-    public static final int QUEUE_SIZE = 5;
+    public static final int QUEUE_SIZE = 10;
 
     private final MappedByteBuffer[] buffers;
     private final int objSize;
@@ -92,8 +92,7 @@ public class CircularMMFQueue {
         return Optional.of(get(readIndex));
     }
 
-    public void add(byte[] object) {
-
+    public boolean add(byte[] object) {
 
         if (isInResetMode()) {
             if (hasReaderReset()) {
@@ -101,17 +100,17 @@ public class CircularMMFQueue {
                 writerContextBuffer.putInt(4, 0);
                 writeIndex = 0;
             }
-            return;
+            return false;
         }
 
         if (writeIndex >= queueSize && currentReaderIndex() >= queueSize && !hasReaderReset()) {
             tellReaderToReset(); // go in reset-mode
-            return;
+            return false;
         }
 
         if (writeIndex >= queueSize) {
             //   System.out.println("Queue is full");
-            return;
+            return false;
         }
 
         MappedByteBuffer buffer = buffers[getBuffer(writeIndex)];
@@ -119,7 +118,7 @@ public class CircularMMFQueue {
         buffer.put(object, 0, object.length);
         updateWriterContext();
         writeIndex++; // flush store buffers
-
+        return true;
     }
 
     void tellReaderToReset() {
