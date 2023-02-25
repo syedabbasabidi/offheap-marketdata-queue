@@ -41,12 +41,14 @@ public class ByteUtils {
         securityBuffer.flip();//need flip
         return new String(securityBuffer.array(), StandardCharsets.UTF_8);
     }
+
     public static String bytesToBroker(byte[] bytes) {
         brokerBuffer.position(0);
         brokerBuffer.put(bytes, 0, bytes.length);
         brokerBuffer.flip();//need flip
         return new String(brokerBuffer.array(), StandardCharsets.UTF_8);
     }
+
     public static String bytesToDate(byte[] bytes) {
         dateBuffer.position(0);
         dateBuffer.put(bytes, 0, bytes.length);

@@ -5,8 +5,8 @@ import util.ByteUtils;
 import java.nio.ByteBuffer;
 
 import static java.util.Arrays.copyOfRange;
-import static util.ByteUtils.bytesToLong;
-import static util.ByteUtils.longToBytes;
+import static java.util.stream.IntStream.range;
+import static util.ByteUtils.*;
 
 public class MarketData {
 
@@ -34,16 +34,15 @@ public class MarketData {
     }
 
     public void setSecurity(String id) {
-        for(int i=0; i<id.length(); i++) {
-            securityMapper.put((byte) id.charAt(i));
-        }
-        for (int i = 0; i < 12; i++) {
-            data[i] = securityMapper.get();
-        }
+        range(0, id.length()).map(id::charAt).forEach(b -> securityMapper.put((byte) b));
+        securityMapper.flip();
+        range(2, 14).forEach(i -> data[i] = securityMapper.get());
     }
 
     public void setPrice(double price) {
+
         byte[] bytes = longToBytes((long) (price * 1000));
+
         for (int i = 0, j = 14; i < bytes.length; i++, j++) {
             data[j] = bytes[i];
         }
@@ -51,10 +50,8 @@ public class MarketData {
 
     public void setExpiresAt(String expiresAt) {
 
-        for(int i=0; i<expiresAt.length(); i++) {
-            dateMapper.put((byte) expiresAt.charAt(i));
-        }
-
+        range(0, expiresAt.length()).map(expiresAt::charAt).forEach(b -> dateMapper.put((byte) b));
+        dateMapper.flip();
         for (int i = 0, j = 22; i < 19; i++, j++) {
             data[j] = dateMapper.get();
         }
@@ -62,10 +59,8 @@ public class MarketData {
 
     public void setBroker(String broker) {
 
-        for(int i=0; i<broker.length(); i++) {
-            brokerMapper.put((byte) broker.charAt(i));
-        }
-
+        range(0, broker.length()).map(broker::charAt).forEach(b -> brokerMapper.put((byte) b));
+        brokerMapper.flip();
         for (int i = 0, j = 41; i < 3; i++, j++) {
             data[j] = brokerMapper.get();
         }
@@ -85,7 +80,7 @@ public class MarketData {
     }
 
     public String getSecurity() {
-        return ByteUtils.bytesToSecurity(copyOfRange(data, 2, 14));
+        return bytesToSecurity(copyOfRange(data, 2, 14));
     }
 
     public double getPrice() {
@@ -123,7 +118,7 @@ public class MarketData {
 
     @Override
     public String toString() {
-        return getSecurity() + "-" + getPrice() + "-" + side() + "-" + (isFirm() ? "Firm" : "LL") + "-" + getBroker() + "-" + (getPriceType() == 1 ? "Price" : "Unknown") + "-" + getValidUntil();
+        return getSecurity() + "-" + getPrice() + "-" + side() + "-" + (isFirm() ? "Firm" : "LL") + "-" + getBroker() + "-" + (getPriceType() == 1 ? "PoP" : "Unknown") + "-" + getValidUntil();
     }
 
     public int size() {

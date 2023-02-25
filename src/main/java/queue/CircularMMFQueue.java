@@ -9,11 +9,11 @@ import java.util.Optional;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 public class CircularMMFQueue {
-    public static final int QUEUE_SIZE = 10;
+    public static final int QUEUE_SIZE = 100_000_000;
 
     private final MappedByteBuffer[] buffers;
     private final int objSize;
-    private final long queueSize;
+    private final long queueCapacity;
     private final RandomAccessFile queue;
     private final RandomAccessFile queueWriterContext;
     private final RandomAccessFile queueReaderContext;
@@ -23,16 +23,17 @@ public class CircularMMFQueue {
     private volatile int writeIndex;
     private volatile int readIndex;
 
-    public CircularMMFQueue(int objSize, int queueSize, String name) throws IOException {
+    private int queueSize;
+
+    public CircularMMFQueue(int objSize, int queueCapacity, String name) throws IOException {
 
         this.objSize = objSize;
-        this.queueSize = queueSize;
+        this.queueCapacity = queueCapacity;
 
         bufferObjCapacity = Integer.MAX_VALUE / objSize;
-        long sizeInBytes = (long) objSize * queueSize;
+        long sizeInBytes = (long) objSize * queueCapacity;
         int numberOfBuffers = (int) Math.ceil((double) sizeInBytes / (double) Integer.MAX_VALUE);
         buffers = new MappedByteBuffer[numberOfBuffers];
-
         queue = new RandomAccessFile("/tmp/" + name + ".txt", "rw");
         queueWriterContext = new RandomAccessFile("/tmp/" + name + "-writer-context.txt", "rw");
         queueReaderContext = new RandomAccessFile("/tmp/" + name + "-reader-context.txt", "rw");
@@ -47,7 +48,7 @@ public class CircularMMFQueue {
             buffers[i] = fileChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
         }
 
-        System.out.println("Queue initialized with size " + queueSize);
+        System.out.println("Queue initialized with size " + queueCapacity);
     }
 
     private int getBuffer(int index) {
@@ -103,12 +104,12 @@ public class CircularMMFQueue {
             return false;
         }
 
-        if (writeIndex >= queueSize && currentReaderIndex() >= queueSize && !hasReaderReset()) {
+        if (writeIndex >= queueCapacity && currentReaderIndex() >= queueCapacity && !hasReaderReset()) {
             tellReaderToReset(); // go in reset-mode
             return false;
         }
 
-        if (writeIndex >= queueSize) {
+        if (writeIndex >= queueCapacity) {
             //   System.out.println("Queue is full");
             return false;
         }
@@ -118,6 +119,7 @@ public class CircularMMFQueue {
         buffer.put(object, 0, object.length);
         updateWriterContext();
         writeIndex++; // flush store buffers
+        queueSize++;
         return true;
     }
 
@@ -164,6 +166,10 @@ public class CircularMMFQueue {
 
     public static CircularMMFQueue getInstance(int objSize) throws IOException {
         return new CircularMMFQueue(objSize, QUEUE_SIZE, "FAST_QUEUE");
+    }
+
+    public int getQueueSize() {
+        return queueSize;
     }
 
     public void shutdown() {
