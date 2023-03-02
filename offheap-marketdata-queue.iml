@@ -11,6 +11,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Maven: com.lmax:disruptor:4.0.0.RC1" level="project" />
     <orderEntry type="library" name="Maven: org.openjdk.jol:jol-core:0.10" level="project" />
     <orderEntry type="library" name="Maven: net.openhft:jlbh:1.23ea0" level="project" />
     <orderEntry type="library" name="Maven: net.openhft:affinity:3.21ea83" level="project" />
