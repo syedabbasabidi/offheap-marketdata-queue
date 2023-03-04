@@ -24,6 +24,7 @@ public class CircularMMFQueue {
     private volatile int readIndex;
 
     private int queueSize;
+    private byte[] dequedMD;
 
     public CircularMMFQueue(int objSize, int queueCapacity, String name) throws IOException {
 
@@ -48,6 +49,7 @@ public class CircularMMFQueue {
             buffers[i] = fileChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
         }
 
+        dequedMD = new byte[objSize];
         System.out.println("Queue initialized with size " + queueCapacity);
     }
 
@@ -66,12 +68,11 @@ public class CircularMMFQueue {
 
     private byte[] get(int index) {
         MappedByteBuffer buffer = buffers[getBuffer(index)];
-        byte[] ret = new byte[objSize];
         buffer.position(getIndexWithinBuffer(index));
-        buffer.get(ret, 0, objSize);
+        buffer.get(dequedMD, 0, objSize);
         updateReaderContext();
         readIndex++; //flush store buffers
-        return ret;
+        return dequedMD;
     }
 
 
