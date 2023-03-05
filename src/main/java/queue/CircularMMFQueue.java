@@ -125,7 +125,7 @@ public class CircularMMFQueue {
     }
 
     void tellReaderToReset() {
-        System.out.println("Asking Reader to reset index");
+        //System.out.println("Asking Reader to reset index");
         writerContextBuffer.putInt(4, 1);
     }
 

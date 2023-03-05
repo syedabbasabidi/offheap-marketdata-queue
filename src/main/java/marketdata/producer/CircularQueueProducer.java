@@ -17,17 +17,17 @@ public class CircularQueueProducer {
         int j = 0;
         marketData.set("GB00BJLR0J16", 101.12d + j, 0, true, (byte) 1, "BRC", "2022-09-14:22:10:13");
         while (true) {
-            while (j < CircularMMFQueue.QUEUE_SIZE) {
-                marketData.setPrice(101.12d + j);
-                marketData.side(j % 2 == 0 ? 0 : 1);
-                marketData.setFirm(j % 2 == 0);
-                mmfQueue.add(marketData.getData());
-                j++;
+            //    while (j < CircularMMFQueue.QUEUE_SIZE) {
+            marketData.setPrice(101.12d + j);
+            marketData.side(j % 2 == 0 ? 0 : 1);
+            marketData.setFirm(j % 2 == 0);
+            mmfQueue.add(marketData.getData());
+            j++;
          /*   if (j % 10_000 == 0) {
                 Thread.sleep(10);
             //    System.out.println(mmfQueue.getQueueSize());
             }*/
-            }
+            //  }
         }
 
     }
