@@ -3,6 +3,7 @@ package model;
 import util.ByteArrayUtil;
 import util.ByteUtils;
 
+import static util.ByteArrayUtil.byteToChar;
 import static util.ByteUtils.bytesToLong;
 import static util.ByteUtils.bytesToSecurity;
 
@@ -12,11 +13,11 @@ public class MarketDataCons {
     private volatile byte[] data;
     private boolean isFirm;
     private int side;
-    private String sec;
+    private char sec[] = new char[12];
     private double price;
-    private String broker;
+    private char broker[] = new char[3];
     private int priceType;
-    private String validUntil;
+    private char[] validUntil = new char[19];
 
     public MarketDataCons() {
         data = new byte[OBJ_SIZE];
@@ -26,7 +27,7 @@ public class MarketDataCons {
         return side;
     }
 
-    public String getSec() {
+    public char[] getSec() {
         return sec;
     }
 
@@ -34,7 +35,7 @@ public class MarketDataCons {
         return price;
     }
 
-    public String getBroker() {
+    public char[] getBroker() {
         return broker;
     }
 
@@ -42,7 +43,7 @@ public class MarketDataCons {
         return priceType;
     }
 
-    public String getValidUntil() {
+    public char[] getValidUntil() {
         return validUntil;
     }
 
@@ -55,7 +56,7 @@ public class MarketDataCons {
     }
 
     public void security() {
-        sec = bytesToSecurity(data, 2, 12);
+        byteToChar(bytesToSecurity(data, 2, 12), this.sec);
     }
 
     public void price() {
@@ -63,11 +64,11 @@ public class MarketDataCons {
     }
 
     public void validUntil() {
-        validUntil = ByteUtils.bytesToDate(data, 22, 19);
+        byteToChar(ByteUtils.bytesToDate(data, 22, 19), this.validUntil);
     }
 
     public void broker() {
-        broker = ByteUtils.bytesToBroker(data, 41, 3);
+        byteToChar(ByteUtils.bytesToBroker(data, 41, 3), this.broker);
     }
 
     public void priceType() {
@@ -91,7 +92,7 @@ public class MarketDataCons {
 
     @Override
     public String toString() {
-        return getSec() + "-" + getPrice() + "-" + getSide() + "-" + (isFirm() ? "Firm" : "LL") + "-" + getBroker() + "-" + (getPriceType() == 1 ? "PoP" : "Unknown") + "-" + getValidUntil();
+        return String.valueOf(getSec()) + "-" + getPrice() + "-" + getSide() + "-" + (isFirm() ? "Firm" : "LL") + "-" + String.valueOf(getBroker()) + "-" + (getPriceType() == 1 ? "PoP" : "Unknown") + "-" + String.valueOf(getValidUntil());
     }
 
     public int size() {

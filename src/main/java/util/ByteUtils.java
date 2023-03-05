@@ -1,7 +1,6 @@
 package util;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class ByteUtils {
 
@@ -35,25 +34,25 @@ public class ByteUtils {
         return intBuffer.get();
     }
 
-    public static String bytesToSecurity(byte[] bytes, int from, int length) {
+    public static byte[] bytesToSecurity(byte[] bytes, int from, int length) {
         securityBuffer.position(0);
         securityBuffer.put(bytes, from, length);
         securityBuffer.flip();//need flip
-        return new String(securityBuffer.array(), StandardCharsets.UTF_8);
+        return securityBuffer.array();
     }
 
-    public static String bytesToBroker(byte[] bytes, int from, int length) {
+    public static byte[] bytesToBroker(byte[] bytes, int from, int length) {
         brokerBuffer.position(0);
         brokerBuffer.put(bytes, from, length);
         brokerBuffer.flip();//need flip
-        return new String(brokerBuffer.array(), StandardCharsets.UTF_8);
+        return brokerBuffer.array();
     }
 
-    public static String bytesToDate(byte[] bytes, int from, int length) {
+    public static byte[] bytesToDate(byte[] bytes, int from, int length) {
         dateBuffer.position(0);
         dateBuffer.put(bytes, from, length);
         dateBuffer.flip();//need flip
-        return new String(dateBuffer.array(), StandardCharsets.UTF_8);
+        return dateBuffer.array();
     }
 
 }
