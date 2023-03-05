@@ -9,7 +9,7 @@ import java.util.Optional;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 public class CircularMMFQueue {
-    public static final int QUEUE_SIZE = 100_000_000;
+    public static final int QUEUE_SIZE = 10;
 
     private final MappedByteBuffer[] buffers;
     private final int objSize;

@@ -1,28 +1,28 @@
 package model;
 
-import util.ByteUtils;
+import util.ByteArrayUtil;
 
 import java.nio.ByteBuffer;
 
-import static java.util.Arrays.copyOfRange;
+import static java.nio.ByteBuffer.allocateDirect;
 import static java.util.stream.IntStream.range;
-import static util.ByteUtils.*;
+import static util.ByteUtils.longToBytes;
 
 public class MarketData {
 
     private static final int OBJ_SIZE = 45;
     private volatile byte[] data;
 
-    private final ByteBuffer securityMapper = ByteBuffer.allocateDirect(12);
-    private final ByteBuffer brokerMapper = ByteBuffer.allocateDirect(3);
-    private final ByteBuffer dateMapper = ByteBuffer.allocateDirect(19);
+    private final ByteBuffer securityMapper = allocateDirect(12);
+    private final ByteBuffer brokerMapper = allocateDirect(3);
+    private final ByteBuffer dateMapper = allocateDirect(19);
 
     public MarketData() {
         data = new byte[OBJ_SIZE];
     }
 
     public void setData(byte[] data) {
-        this.data = data;
+        ByteArrayUtil.copy(data, this.data);
     }
 
     public void setFirm(boolean isFirm) {
@@ -71,35 +71,6 @@ public class MarketData {
     }
 
 
-    public boolean isFirm() {
-        return copyOfRange(data, 0, 1)[0] == 1;
-    }
-
-    public int side() {
-        return copyOfRange(data, 1, 2)[0];
-    }
-
-    public String getSecurity() {
-        return bytesToSecurity(copyOfRange(data, 2, 14));
-    }
-
-    public double getPrice() {
-        return (double) bytesToLong(copyOfRange(data, 14, 22)) / 1000;
-    }
-
-    public String getValidUntil() {
-        return ByteUtils.bytesToDate(copyOfRange(data, 22, 41));
-    }
-
-    public String getBroker() {
-        return ByteUtils.bytesToBroker(copyOfRange(data, 41, 44));
-    }
-
-    public int getPriceType() {
-        return copyOfRange(data, 44, 45)[0];
-    }
-
-
     public void set(String secId, double price, int side, boolean isFirm, byte priceType, String broker, String expiresAt) {
         this.setSecurity(secId);
         this.setPrice(price);
@@ -116,10 +87,6 @@ public class MarketData {
         return data;
     }
 
-    @Override
-    public String toString() {
-        return getSecurity() + "-" + getPrice() + "-" + side() + "-" + (isFirm() ? "Firm" : "LL") + "-" + getBroker() + "-" + (getPriceType() == 1 ? "PoP" : "Unknown") + "-" + getValidUntil();
-    }
 
     public int size() {
         return OBJ_SIZE;

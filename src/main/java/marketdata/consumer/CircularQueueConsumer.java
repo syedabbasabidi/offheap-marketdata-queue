@@ -1,13 +1,13 @@
 package marketdata.consumer;
 
-import model.MarketData;
+import model.MarketDataCons;
 import queue.CircularMMFQueue;
 
 import java.io.IOException;
 import java.util.Optional;
 
 public class CircularQueueConsumer {
-    private static MarketData arr[] = new MarketData[1000];
+    private static MarketDataCons arr[] = new MarketDataCons[1000];
 
     public static void main(String[] args) throws IOException {
         start(false);
@@ -16,7 +16,7 @@ public class CircularQueueConsumer {
     public static void start(boolean log) {
 
         System.out.println("Consumer starting...");
-        MarketData marketData = new MarketData();
+        MarketDataCons marketData = new MarketDataCons();
         CircularMMFQueue mmfQueue = getInstance(marketData);
         int i = 0;
         System.out.println("Reading to consume");
@@ -30,22 +30,22 @@ public class CircularQueueConsumer {
         }
     }
 
-    private static CircularMMFQueue getInstance(MarketData marketData) {
+    private static void process(MarketDataCons marketData, int i, byte[] data) {
+        marketData.setData(data);
+        if (i % 100_000 == 0) arr[i / 100_000] = marketData;
+        System.out.println(marketData);
+    }
+
+    public static MarketDataCons[] getCapturedMD() {
+        return arr;
+    }
+
+    private static CircularMMFQueue getInstance(MarketDataCons marketData) {
         try {
             return CircularMMFQueue.getInstance(marketData.size());
         } catch (IOException e) {
             System.out.println(e);
             return null;
         }
-    }
-
-    private static void process(MarketData marketData, int i, byte[] data) {
-        marketData.setData(data);
-        if (i % 100_000 == 0) arr[i / 100_000] = marketData;
-        System.out.println(marketData);
-    }
-
-    public static MarketData[] getCapturedMD() {
-        return arr;
     }
 }

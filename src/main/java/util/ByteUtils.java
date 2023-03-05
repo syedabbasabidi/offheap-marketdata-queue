@@ -21,9 +21,9 @@ public class ByteUtils {
         return intBuffer.array();
     }
 
-    public static long bytesToLong(byte[] bytes) {
+    public static long bytesToLong(byte[] bytes, int from, int length) {
         longBuffer.position(0);
-        longBuffer.put(bytes, 0, bytes.length);
+        longBuffer.put(bytes, from, length);
         longBuffer.flip();//need flip
         return longBuffer.getLong();
     }
@@ -35,23 +35,23 @@ public class ByteUtils {
         return intBuffer.get();
     }
 
-    public static String bytesToSecurity(byte[] bytes) {
+    public static String bytesToSecurity(byte[] bytes, int from, int length) {
         securityBuffer.position(0);
-        securityBuffer.put(bytes, 0, bytes.length);
+        securityBuffer.put(bytes, from, length);
         securityBuffer.flip();//need flip
         return new String(securityBuffer.array(), StandardCharsets.UTF_8);
     }
 
-    public static String bytesToBroker(byte[] bytes) {
+    public static String bytesToBroker(byte[] bytes, int from, int length) {
         brokerBuffer.position(0);
-        brokerBuffer.put(bytes, 0, bytes.length);
+        brokerBuffer.put(bytes, from, length);
         brokerBuffer.flip();//need flip
         return new String(brokerBuffer.array(), StandardCharsets.UTF_8);
     }
 
-    public static String bytesToDate(byte[] bytes) {
+    public static String bytesToDate(byte[] bytes, int from, int length) {
         dateBuffer.position(0);
-        dateBuffer.put(bytes, 0, bytes.length);
+        dateBuffer.put(bytes, from, length);
         dateBuffer.flip();//need flip
         return new String(dateBuffer.array(), StandardCharsets.UTF_8);
     }
