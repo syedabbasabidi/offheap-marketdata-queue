@@ -9,27 +9,32 @@ import static queue.CircularMMFQueue.getInstance;
 
 public class CircularQueueProducer {
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static final int BATCH_SIZE = 1_000;
 
-        MarketData marketData = new MarketData();
-        CircularMMFQueue mmfQueue = getInstance(marketData.size());
+    public static void main(String[] args) throws IOException {
+
+        MarketData md = new MarketData();
+        CircularMMFQueue mmfQueue = getInstance(md.size());
 
         int j = 0;
-        marketData.set("GB00BJLR0J16", 101.12d + j, 0, true, (byte) 1, "BRC", "2022-09-14:22:10:13");
+        md.set("GB00BJLR0J16", 1d + j, 0, true, (byte) 1, "BRC", "2023-02-14:22:10:13");
         while (true) {
-            //    while (j < CircularMMFQueue.QUEUE_SIZE) {
-            marketData.setPrice(101.12d + j);
-            marketData.side(j % 2 == 0 ? 0 : 1);
-            marketData.setFirm(j % 2 == 0);
-            mmfQueue.add(marketData.getData());
-            j++;
-         /*   if (j % 10_000 == 0) {
-                Thread.sleep(10);
-            //    System.out.println(mmfQueue.getQueueSize());
-            }*/
-            //  }
-        }
+            md.setPrice(1d + j);
+            md.side(j % 2 == 0 ? 0 : 1);
+            md.setFirm(j % 2 == 0);
+            j = mmfQueue.add(md.getData()) ? j + 1 : j;
+            if (j % BATCH_SIZE == 0) pause((j / BATCH_SIZE) + 1);
 
+        }
+    }
+
+    private static void pause(int batchNumber) {
+        try {
+            System.out.println("Wrote batch number " + batchNumber);
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static String toMB(long init) {
