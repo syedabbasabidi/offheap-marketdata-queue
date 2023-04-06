@@ -21,7 +21,8 @@ public class JLBHMMFCircularQueue implements JLBHTask {
 
     public static void main(String[] args) {
 
-        JLBHOptions jlbhOptions = new JLBHOptions().warmUpIterations(5).iterations(10).throughput(1_000_000).accountForCoordinatedOmission(false).recordOSJitter(false)
+        JLBHOptions jlbhOptions = new JLBHOptions().warmUpIterations(5).iterations(10).throughput(1_000_000)
+                .accountForCoordinatedOmission(false).recordOSJitter(false)
                 .jlbhTask(new JLBHMMFCircularQueue());
 
         new JLBH(jlbhOptions).start();
@@ -36,7 +37,7 @@ public class JLBHMMFCircularQueue implements JLBHTask {
         try {
             consumerThread = new Thread(CircularQueueConsumer::start);
             consumerThread.start();
-            circularMMFQueue = getInstance(marketData.size());
+            circularMMFQueue = getInstance(marketData.size(), CircularMMFQueue.DEFAULT_SIZE, "/tmp");
         } catch (IOException e) {
             System.out.println(e);
         }

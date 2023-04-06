@@ -4,12 +4,15 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 public class CircularMMFQueue {
-    public static final int QUEUE_SIZE = 10;
+    public static final int DEFAULT_SIZE = 10;
+    private static final String NAME = "FAST_QUEUE";
 
     private final MappedByteBuffer[] buffers;
     private final int objSize;
@@ -20,33 +23,45 @@ public class CircularMMFQueue {
     private final int bufferObjCapacity;
     private final MappedByteBuffer writerContextBuffer;
     private final MappedByteBuffer readerContextBuffer;
+    private final FileChannel queueChannel;
+    private final FileChannel queueWriterContextChannel;
     private volatile int writeIndex;
     private volatile int readIndex;
 
     private int queueSize;
     private byte[] dequedMD;
 
-    public CircularMMFQueue(int objSize, int queueCapacity, String name) throws IOException {
+    private final String queuePath;
+    private final String queueWriterContextPath;
+    private final String queueReaderContextPath;
+
+    public CircularMMFQueue(int objSize, int queueCapacity, String path) throws IOException {
 
         this.objSize = objSize;
         this.queueCapacity = queueCapacity;
+
+        queuePath = path + "/" + NAME + ".txt";
+        queueReaderContextPath = path + "/" + NAME + "-reader-context.txt";
+        queueWriterContextPath = path + "/" + NAME + "-writer-context.txt";
 
         bufferObjCapacity = Integer.MAX_VALUE / objSize;
         long sizeInBytes = (long) objSize * queueCapacity;
         int numberOfBuffers = (int) Math.ceil((double) sizeInBytes / (double) Integer.MAX_VALUE);
         buffers = new MappedByteBuffer[numberOfBuffers];
-        queue = new RandomAccessFile("/tmp/" + name + ".txt", "rw");
-        queueWriterContext = new RandomAccessFile("/tmp/" + name + "-writer-context.txt", "rw");
-        queueReaderContext = new RandomAccessFile("/tmp/" + name + "-reader-context.txt", "rw");
-        writerContextBuffer = queueWriterContext.getChannel().map(READ_WRITE, 0, 8);
+        queue = new RandomAccessFile(queuePath, "rw");
+        queueWriterContext = new RandomAccessFile(queueWriterContextPath, "rw");
+        queueReaderContext = new RandomAccessFile(queueReaderContextPath, "rw");
+        queueWriterContextChannel = queueWriterContext.getChannel();
+        writerContextBuffer = queueWriterContextChannel.map(READ_WRITE, 0, 8);
         readerContextBuffer = queueReaderContext.getChannel().map(READ_WRITE, 0, 8);
         writeIndex = currentWriterIndex();
         readIndex = currentReaderIndex();
 
 
-        FileChannel fileChannel = queue.getChannel();
+        queueChannel = queue.getChannel();
+
         for (int i = 0; i < numberOfBuffers; i++) {
-            buffers[i] = fileChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
+            buffers[i] = queueChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
         }
 
         dequedMD = new byte[objSize];
@@ -111,7 +126,6 @@ public class CircularMMFQueue {
         }
 
         if (writeIndex >= queueCapacity) {
-            //   System.out.println("Queue is full");
             return false;
         }
 
@@ -165,18 +179,25 @@ public class CircularMMFQueue {
         return readIndex;
     }
 
-    public static CircularMMFQueue getInstance(int objSize) throws IOException {
-        return new CircularMMFQueue(objSize, QUEUE_SIZE, "FAST_QUEUE");
+    public static CircularMMFQueue getInstance(int objSize, int size, String path) throws IOException {
+        return new CircularMMFQueue(objSize, size, path);
     }
 
     public int getQueueSize() {
-        return queueSize;
+        return writeIndex;
     }
 
-    public void shutdown() {
+    public void reset() {
         try {
+            queueChannel.close();
+            queueWriterContext.close();
+            queueReaderContext.close();
             queue.close();
             queueWriterContext.close();
+            queueReaderContext.close();
+            Files.delete(Path.of(queuePath));
+            Files.delete(Path.of(queueReaderContextPath));
+            Files.delete(Path.of(queueWriterContextPath));
         } catch (IOException e) {
             System.out.println("Failed to close underlying file" + e);
         }

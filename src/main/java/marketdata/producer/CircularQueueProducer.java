@@ -5,6 +5,7 @@ import queue.CircularMMFQueue;
 
 import java.io.IOException;
 
+import static queue.CircularMMFQueue.DEFAULT_SIZE;
 import static queue.CircularMMFQueue.getInstance;
 
 public class CircularQueueProducer {
@@ -14,7 +15,7 @@ public class CircularQueueProducer {
     public static void main(String[] args) throws IOException {
 
         MarketData md = new MarketData();
-        CircularMMFQueue mmfQueue = getInstance(md.size());
+        CircularMMFQueue mmfQueue = getInstance(md.size(), DEFAULT_SIZE, "/tmp");
 
         int j = 0;
         md.set("GB00BJLR0J16", 1d + j, 0, true, (byte) 1, "BRC", "2023-02-14:22:10:13");

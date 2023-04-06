@@ -6,6 +6,8 @@ import queue.CircularMMFQueue;
 import java.io.IOException;
 import java.util.Optional;
 
+import static queue.CircularMMFQueue.DEFAULT_SIZE;
+
 public class CircularQueueConsumer {
 
     public static void main(String[] args) {
@@ -31,7 +33,7 @@ public class CircularQueueConsumer {
 
     private static CircularMMFQueue getInstance(MarketDataCons marketData) {
         try {
-            return CircularMMFQueue.getInstance(marketData.size());
+            return CircularMMFQueue.getInstance(marketData.size(), DEFAULT_SIZE, "/tmp");
         } catch (IOException e) {
             System.out.println(e);
             return null;
