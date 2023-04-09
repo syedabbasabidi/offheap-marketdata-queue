@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
+import static java.util.Arrays.stream;
 
 public class CircularMMFQueue {
     public static final int DEFAULT_SIZE = 10;
@@ -184,10 +185,18 @@ public class CircularMMFQueue {
     }
 
     public int getQueueSize() {
-        return writeIndex;
+        return writeIndex - readIndex;
     }
 
     public void reset() {
+        stream(this.buffers).forEach(MappedByteBuffer::clear);
+        this.readerContextBuffer.clear();
+        this.writerContextBuffer.clear();
+        this.readIndex = 0;
+        this.writeIndex = 0;
+    }
+
+    public void cleanup() {
         try {
             queueChannel.close();
             queueWriterContext.close();
