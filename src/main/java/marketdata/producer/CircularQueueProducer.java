@@ -10,7 +10,7 @@ import static queue.CircularMMFQueue.getInstance;
 
 public class CircularQueueProducer {
 
-    public static final int BATCH_SIZE = 1_000;
+    public static final int BATCH_SIZE = 10;
 
     public static void main(String[] args) throws IOException {
 
@@ -24,15 +24,15 @@ public class CircularQueueProducer {
             md.side(j % 2 == 0 ? 0 : 1);
             md.setFirm(j % 2 == 0);
             j = mmfQueue.add(md.getData()) ? j + 1 : j;
-            if (j % BATCH_SIZE == 0) pause((j / BATCH_SIZE) + 1);
+            if (j % BATCH_SIZE == 0) pause(mmfQueue, (j / BATCH_SIZE) + 1);
 
         }
     }
 
-    private static void pause(int batchNumber) {
+    private static void pause(CircularMMFQueue mmfQueue, int batchNumber) {
         try {
-            System.out.println("Wrote batch number " + batchNumber);
-            Thread.sleep(1000);
+            System.out.println("Wrote batch number " + batchNumber + ", size " + mmfQueue.getQueueSize());
+            Thread.sleep(10_000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

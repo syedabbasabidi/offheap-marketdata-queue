@@ -4,11 +4,11 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
+import static java.nio.file.Files.delete;
 import static java.util.Arrays.stream;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
@@ -17,23 +17,21 @@ public class CircularMMFQueue {
     public static final int DEFAULT_SIZE = 10;
     private static final String NAME = "FAST_QUEUE";
 
-    private final MappedByteBuffer[] buffers;
     private final int objSize;
     private final long queueCapacity;
     private final RandomAccessFile queue;
     private final RandomAccessFile queueWriterContext;
     private final RandomAccessFile queueReaderContext;
-    private final int bufferObjCapacity;
+    private final MappedByteBuffer[] queueBuffers;
     private final MappedByteBuffer writerContextBuffer;
     private final MappedByteBuffer readerContextBuffer;
     private final FileChannel queueChannel;
     private final FileChannel queueWriterContextChannel;
+    private final int bufferObjCapacity;
+    private final FileChannel queueReaderContextChannel;
     private volatile int writeIndex;
     private volatile int readIndex;
-
-    private int queueSize;
     private byte[] dequedMD;
-
     private final String queuePath;
     private final String queueWriterContextPath;
     private final String queueReaderContextPath;
@@ -50,13 +48,14 @@ public class CircularMMFQueue {
         bufferObjCapacity = Integer.MAX_VALUE / objSize;
         long sizeInBytes = (long) objSize * queueCapacity;
         int numberOfBuffers = (int) Math.ceil((double) sizeInBytes / (double) Integer.MAX_VALUE);
-        buffers = new MappedByteBuffer[numberOfBuffers];
+        queueBuffers = new MappedByteBuffer[numberOfBuffers];
         queue = new RandomAccessFile(queuePath, "rw");
         queueWriterContext = new RandomAccessFile(queueWriterContextPath, "rw");
         queueReaderContext = new RandomAccessFile(queueReaderContextPath, "rw");
         queueWriterContextChannel = queueWriterContext.getChannel();
-        writerContextBuffer = queueWriterContextChannel.map(READ_WRITE, 0, 8);
-        readerContextBuffer = queueReaderContext.getChannel().map(READ_WRITE, 0, 8);
+        writerContextBuffer = queueWriterContextChannel.map(READ_WRITE, 0, 4);
+        queueReaderContextChannel = queueReaderContext.getChannel();
+        readerContextBuffer = queueReaderContextChannel.map(READ_WRITE, 0, 4);
         writeIndex = currentWriterIndex();
         readIndex = currentReaderIndex();
 
@@ -64,7 +63,7 @@ public class CircularMMFQueue {
         queueChannel = queue.getChannel();
 
         for (int i = 0; i < numberOfBuffers; i++) {
-            buffers[i] = queueChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
+            queueBuffers[i] = queueChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
         }
 
         dequedMD = new byte[objSize];
@@ -74,60 +73,37 @@ public class CircularMMFQueue {
 
     public Optional<byte[]> get() {
 
-        if (isInResetMode()) {
-            resetReaderContext();
-            return empty();
-        }
-        readerContextBuffer.putInt(4, 0);
-
         writeIndex = currentWriterIndex();
         if (!hasNext()) {
             return empty();
         }
-        return of(get(readIndex));
+        return of(get(readFromIndex()));
     }
 
     public boolean add(byte[] object) {
 
-        if (isInResetMode()) {
-            if (hasReaderReset()) resetWriterContext();
-            return false;
-        }
+        if ((writeIndex - currentReaderIndex()) >= (queueCapacity)) return false;
 
-        if (writeIndex >= queueCapacity && currentReaderIndex() >= queueCapacity && !hasReaderReset()) {
-            tellReaderToReset(); // go in reset-mode
-            return false;
-        }
-
-        if (writeIndex >= queueCapacity && currentReaderIndex() == 0) {
-            return false;
-        }
-
-        MappedByteBuffer buffer = buffers[getBuffer(writeIndex)];
-        buffer.position(getIndexWithinBuffer(writeIndex));
+        MappedByteBuffer buffer = queueBuffers[getBuffer(writeAtIndex())];
+        buffer.position(getIndexWithinBuffer(writeAtIndex()));
         buffer.put(object, 0, object.length);
         updateWriterContext();
         writeIndex++; // flush store buffers
-        queueSize++;
         return true;
     }
 
-    private void resetWriterContext() {
-        writerContextBuffer.putInt(0, 0);
-        writerContextBuffer.putInt(4, 0);
-        writeIndex = 0;
+    private int readFromIndex() {
+        return (int) (readIndex % queueCapacity);
     }
 
-
-    private void resetReaderContext() {
-        readerContextBuffer.putInt(0, 0);
-        readerContextBuffer.putInt(4, 1);
-        readIndex = 0;
+    private int writeAtIndex() {
+        return (int) (writeIndex % queueCapacity);
     }
+
 
     private int getBuffer(int index) {
         int ret = index / bufferObjCapacity;
-        if (ret >= buffers.length) {
+        if (ret >= queueBuffers.length) {
             throw new IndexOutOfBoundsException("Index doesn't exist");
         }
 
@@ -139,25 +115,12 @@ public class CircularMMFQueue {
     }
 
     private byte[] get(int index) {
-        MappedByteBuffer buffer = buffers[getBuffer(index)];
+        MappedByteBuffer buffer = queueBuffers[getBuffer(index)];
         buffer.position(getIndexWithinBuffer(index));
         buffer.get(dequedMD, 0, objSize);
         updateReaderContext();
         readIndex++; //flush store buffers
         return dequedMD;
-    }
-
-    void tellReaderToReset() {
-        //System.out.println("Asking Reader to reset index");
-        writerContextBuffer.putInt(4, 1);
-    }
-
-    boolean hasReaderReset() {
-        return readerContextBuffer.getInt(4) == 1;
-    }
-
-    boolean isInResetMode() {
-        return writerContextBuffer.getInt(4) == 1;
     }
 
     private int currentReaderIndex() {
@@ -189,7 +152,7 @@ public class CircularMMFQueue {
     }
 
     public void reset() {
-        stream(this.buffers).forEach(MappedByteBuffer::clear);
+        stream(this.queueBuffers).forEach(MappedByteBuffer::clear);
         this.readerContextBuffer.clear();
         this.writerContextBuffer.clear();
         this.readIndex = 0;
@@ -199,14 +162,16 @@ public class CircularMMFQueue {
     public void cleanup() {
         try {
             queueChannel.close();
+            queueReaderContextChannel.close();
+            queueWriterContextChannel.close();
+
             queueWriterContext.close();
             queueReaderContext.close();
             queue.close();
-            queueWriterContext.close();
-            queueReaderContext.close();
-            Files.delete(Path.of(queuePath));
-            Files.delete(Path.of(queueReaderContextPath));
-            Files.delete(Path.of(queueWriterContextPath));
+
+            delete(Path.of(queuePath));
+            delete(Path.of(queueReaderContextPath));
+            delete(Path.of(queueWriterContextPath));
         } catch (IOException e) {
             System.out.println("Failed to close underlying file" + e);
         }

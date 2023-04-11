@@ -28,7 +28,7 @@ public class CircularQueueConsumer {
 
     private static void process(MarketDataCons marketData, byte[] data) {
         marketData.setData(data);
-       // System.out.println(marketData);
+        System.out.println(marketData);
     }
 
     private static CircularMMFQueue getInstance(MarketDataCons marketData) {
