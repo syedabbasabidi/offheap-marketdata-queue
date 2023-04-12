@@ -14,7 +14,7 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 public class CircularMMFQueue {
-    public static final int DEFAULT_SIZE = 10;
+    public static final int DEFAULT_SIZE = 1_000_000;
     private static final String NAME = "FAST_QUEUE";
 
     private final int objSize;
@@ -149,6 +149,14 @@ public class CircularMMFQueue {
 
     public int getQueueSize() {
         return writeIndex - readIndex;
+    }
+
+    public int messagesWritten() {
+        return currentWriterIndex();
+    }
+
+    public int messagesRead() {
+        return currentReaderIndex();
     }
 
     public void reset() {

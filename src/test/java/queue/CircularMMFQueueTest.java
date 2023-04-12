@@ -56,7 +56,5 @@ public class CircularMMFQueueTest {
 
         assertEquals(queue.getQueueSize(), SIZE);
 
-
     }
-
 }

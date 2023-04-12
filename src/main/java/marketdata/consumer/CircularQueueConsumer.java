@@ -8,19 +8,22 @@ import java.util.Optional;
 
 import static queue.CircularMMFQueue.DEFAULT_SIZE;
 
-public class CircularQueueConsumer {
+public class CircularQueueConsumer implements Runnable {
 
     public static void main(String[] args) {
-        start();
+        new CircularQueueConsumer().run();
     }
 
-    public static void start() {
+    public void run() {
 
         System.out.println("Consumer starting...");
         MarketDataCons marketData = new MarketDataCons();
         CircularMMFQueue mmfQueue = getInstance(marketData);
         System.out.println("Reading to consume");
         while (true) {
+
+            if (Thread.interrupted()) break;
+
             Optional<byte[]> bytesOP = mmfQueue.get();
             bytesOP.ifPresent(bytes -> process(marketData, bytes));
         }
@@ -28,7 +31,6 @@ public class CircularQueueConsumer {
 
     private static void process(MarketDataCons marketData, byte[] data) {
         marketData.setData(data);
-        System.out.println(marketData);
     }
 
     private static CircularMMFQueue getInstance(MarketDataCons marketData) {
