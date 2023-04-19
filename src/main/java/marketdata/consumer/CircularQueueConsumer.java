@@ -6,12 +6,26 @@ import queue.CircularMMFQueue;
 import java.io.IOException;
 import java.util.Optional;
 
+import static java.lang.Integer.parseInt;
+import static java.lang.Thread.interrupted;
 import static queue.CircularMMFQueue.DEFAULT_SIZE;
 
 public class CircularQueueConsumer implements Runnable {
 
+    private final int howManyToConsume;
+
+    public CircularQueueConsumer(int howManyToConsumer) {
+        this.howManyToConsume = howManyToConsumer == -1 ? parseInt(System.getProperty("concount", "-1")) : -1;
+    }
+
     public static void main(String[] args) {
-        new CircularQueueConsumer().run();
+        CircularQueueConsumer circularQueueConsumer = new CircularQueueConsumer(args.length > 0 ? parseInt(args[0]) : -1);
+        circularQueueConsumer.run();
+    }
+
+    private boolean hasConsumedEnough(int totalConsumedMessages) {
+        if (howManyToConsume == -1) return false;
+        return howManyToConsume < totalConsumedMessages;
     }
 
     public void run() {
@@ -20,17 +34,21 @@ public class CircularQueueConsumer implements Runnable {
         MarketDataCons marketData = new MarketDataCons();
         CircularMMFQueue mmfQueue = getInstance(marketData);
         System.out.println("Reading to consume");
+        int totalConsumedMessages = 0;
         while (true) {
 
-            if (Thread.interrupted()) break;
+            if (interrupted() || hasConsumedEnough(totalConsumedMessages)) break;
 
             Optional<byte[]> bytesOP = mmfQueue.get();
             bytesOP.ifPresent(bytes -> process(marketData, bytes));
+            totalConsumedMessages++;
         }
     }
 
+
     private static void process(MarketDataCons marketData, byte[] data) {
         marketData.setData(data);
+        System.out.println(marketData);
     }
 
     private static CircularMMFQueue getInstance(MarketDataCons marketData) {

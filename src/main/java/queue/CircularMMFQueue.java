@@ -148,7 +148,7 @@ public class CircularMMFQueue {
     }
 
     public int getQueueSize() {
-        return writeIndex - readIndex;
+        return currentWriterIndex() - currentReaderIndex();
     }
 
     public int messagesWritten() {
@@ -165,6 +165,17 @@ public class CircularMMFQueue {
         this.writerContextBuffer.clear();
         this.readIndex = 0;
         this.writeIndex = 0;
+    }
+
+
+    public void flush() {
+        try {
+            this.queueChannel.force(true);
+            queueReaderContextChannel.force(true);
+            queueWriterContextChannel.force(true);
+        } catch (Exception exp) {
+            System.out.println(exp);
+        }
     }
 
     public void cleanup() {
