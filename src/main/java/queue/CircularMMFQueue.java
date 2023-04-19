@@ -14,7 +14,7 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 public class CircularMMFQueue {
-    public static final int DEFAULT_SIZE = 1_000_000;
+    public static final int DEFAULT_SIZE = 10;
     private static final String NAME = "FAST_QUEUE";
 
     private final int objSize;
@@ -143,8 +143,8 @@ public class CircularMMFQueue {
         return writerContextBuffer.getInt(0);
     }
 
-    public static CircularMMFQueue getInstance(int objSize, int size, String path) throws IOException {
-        return new CircularMMFQueue(objSize, size, path);
+    public static CircularMMFQueue getInstance(int objSize, String path) throws IOException {
+        return new CircularMMFQueue(objSize, DEFAULT_SIZE, path);
     }
 
     public int getQueueSize() {

@@ -15,7 +15,7 @@ public class CircularQueueProducer {
     public static void main(String[] args) throws IOException {
 
         MarketData md = new MarketData();
-        CircularMMFQueue mmfQueue = getInstance(md.size(), DEFAULT_SIZE, "/tmp");
+        CircularMMFQueue mmfQueue = getInstance(md.size(), "/tmp");
 
         int j = 0;
         md.set("GB00BJLR0J16", 1d + j, 0, true, (byte) 1, "BRC", "2023-02-14:22:10:13");
@@ -24,7 +24,7 @@ public class CircularQueueProducer {
             md.side(j % 2 == 0 ? 0 : 1);
             md.setFirm(j % 2 == 0);
             j = mmfQueue.add(md.getData()) ? j + 1 : j;
-            if (j % BATCH_SIZE == 0) pause(mmfQueue, (j / BATCH_SIZE) + 1);
+            if (j > 0 && j % BATCH_SIZE == 0) pause(mmfQueue, (j / BATCH_SIZE));
 
         }
     }

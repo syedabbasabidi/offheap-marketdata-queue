@@ -35,7 +35,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
         md = new MarketData();
         md.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13");
         try {
-            circularMMFQueue = getInstance(md.size(), CircularMMFQueue.DEFAULT_SIZE, "/tmp");
+            circularMMFQueue = getInstance(md.size(), "/tmp");
             producerThread = new Thread(() -> {
                 while (true) {
                     md.setPrice(++price);

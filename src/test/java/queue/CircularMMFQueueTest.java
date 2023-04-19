@@ -18,7 +18,7 @@ public class CircularMMFQueueTest {
     @BeforeEach
     public void setup() throws IOException {
         MarketData md = new MarketData();
-        queue = getInstance(md.size(), SIZE, "/tmp");
+        queue = getInstance(md.size(), "/tmp");
         queue.cleanup();
     }
 

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import static java.lang.Integer.parseInt;
+import static java.lang.System.getProperty;
 import static java.lang.Thread.interrupted;
 import static queue.CircularMMFQueue.DEFAULT_SIZE;
 
@@ -15,7 +16,7 @@ public class CircularQueueConsumer implements Runnable {
     private final int howManyToConsume;
 
     public CircularQueueConsumer(int howManyToConsumer) {
-        this.howManyToConsume = howManyToConsumer == -1 ? parseInt(System.getProperty("concount", "-1")) : -1;
+        this.howManyToConsume = howManyToConsumer == -1 ? parseInt(getProperty("concount", "-1")) : -1;
     }
 
     public static void main(String[] args) {
@@ -25,7 +26,7 @@ public class CircularQueueConsumer implements Runnable {
 
     private boolean hasConsumedEnough(int totalConsumedMessages) {
         if (howManyToConsume == -1) return false;
-        return howManyToConsume < totalConsumedMessages;
+        return howManyToConsume <= totalConsumedMessages;
     }
 
     public void run() {
@@ -53,7 +54,7 @@ public class CircularQueueConsumer implements Runnable {
 
     private static CircularMMFQueue getInstance(MarketDataCons marketData) {
         try {
-            return CircularMMFQueue.getInstance(marketData.size(), DEFAULT_SIZE, "/tmp");
+            return CircularMMFQueue.getInstance(marketData.size(), "/tmp");
         } catch (IOException e) {
             System.out.println(e);
             return null;
