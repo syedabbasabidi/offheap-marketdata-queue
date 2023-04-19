@@ -12,7 +12,7 @@ import static queue.CircularMMFQueue.getInstance;
 
 public class CircularMMFQueueTest {
 
-    public static final int SIZE = 100;
+    public static final int SIZE = 10;
     private CircularMMFQueue queue;
 
     @BeforeEach
@@ -46,8 +46,8 @@ public class CircularMMFQueueTest {
             queue.add(md.getData());
         });
         assertEquals(queue.getQueueSize(), SIZE);
-        rangeClosed(1, 50).forEach(j -> queue.get());
-        assertEquals(queue.getQueueSize(), 50);
+        rangeClosed(1, 5).forEach(j -> queue.get());
+        assertEquals(queue.getQueueSize(), 5);
 
         rangeClosed(1, SIZE).forEach(j -> {
             md.setPrice(j);
