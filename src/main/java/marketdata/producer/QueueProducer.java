@@ -18,7 +18,7 @@ public class QueueProducer {
 
         long startTime = nanoTime();
         IntStream.range(0, QUEUE_SIZE).forEach(j -> {
-            marketData.set("GB00BJLR0J16", 101.12d + j, j % 2 == 0 ? 0 : 1, j % 2 == 0, (byte)1, "BRC", "2022-09-14:22:10:13");
+            marketData.set("GB00BJLR0J16", 101.12d + j, j % 2 == 0 ? 0 : 1, j % 2 == 0, (byte)1, "BRC", "2022-09-14:22:10:13", j);
             mmfQueue.add(marketData.getData());
 
         });

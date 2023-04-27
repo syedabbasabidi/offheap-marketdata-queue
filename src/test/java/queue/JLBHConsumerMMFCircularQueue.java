@@ -19,6 +19,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
 
     private Thread producerThread;
     private byte[] bytes;
+    private int id;
 
     public static void main(String[] args) {
 
@@ -34,12 +35,13 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
 
         this.jlbh = jlbh;
         md = new MarketData();
-        md.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13");
+        md.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", id);
         try {
             circularMMFQueue = getInstance(md.size(), "/tmp");
             producerThread = new Thread(() -> {
                 while (true) {
                     md.setPrice(++price);
+                    md.setId(id++);
                     circularMMFQueue.add(md.getData());
                 }
             });

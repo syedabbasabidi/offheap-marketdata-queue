@@ -33,7 +33,7 @@ public class JLBHMMFCircularQueue implements JLBHTask {
 
         this.jlbh = jlbh;
         marketData = new MarketData();
-        marketData.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13");
+        marketData.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", 1);
         try {
             consumerThread = new Thread(new CircularQueueConsumer(-1));
             consumerThread.start();
@@ -47,7 +47,7 @@ public class JLBHMMFCircularQueue implements JLBHTask {
     public void run(long startTimeNS) {
         marketData.setPrice(++price);
         circularMMFQueue.add(marketData.getData());
-        jlbh.sampleNanos((System.nanoTime() - 20 ) - startTimeNS);
+        jlbh.sampleNanos((System.nanoTime() - 20) - startTimeNS);
     }
 
     @Override

@@ -27,11 +27,11 @@ public class ByteUtils {
         return longBuffer.getLong();
     }
 
-    public static byte bytesToInt(byte[] bytes) {
+    public static int bytesToInt(byte[] bytes, int from, int length) {
         intBuffer.position(0);
-        intBuffer.put(bytes, 0, bytes.length);
+        intBuffer.put(bytes, from, length);
         intBuffer.flip();//need flip
-        return intBuffer.get();
+        return intBuffer.getInt();
     }
 
     public static byte[] bytesToSecurity(byte[] bytes, int from, int length) {

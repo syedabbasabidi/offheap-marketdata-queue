@@ -6,11 +6,12 @@ import java.nio.ByteBuffer;
 
 import static java.nio.ByteBuffer.allocateDirect;
 import static java.util.stream.IntStream.range;
+import static util.ByteUtils.intToBytes;
 import static util.ByteUtils.longToBytes;
 
 public class MarketData {
 
-    private static final int OBJ_SIZE = 45;
+    private static final int OBJ_SIZE = 49;
     private volatile byte[] data;
 
     private final ByteBuffer securityMapper = allocateDirect(12);
@@ -70,8 +71,14 @@ public class MarketData {
         data[44] = priceType;
     }
 
+    public void setId(int id) {
+        byte[] bytes = intToBytes(id);
+        for (int i = 0, j = 45; i < bytes.length; i++, j++) {
+            data[j] = bytes[i];
+        }
+    }
 
-    public void set(String secId, double price, int side, boolean isFirm, byte priceType, String broker, String expiresAt) {
+    public void set(String secId, double price, int side, boolean isFirm, byte priceType, String broker, String expiresAt, int id) {
         this.setSecurity(secId);
         this.setPrice(price);
         this.side(side);
@@ -79,7 +86,7 @@ public class MarketData {
         this.setPriceType(priceType);
         this.setBroker(broker);
         this.setExpiresAt(expiresAt);
-
+        this.setId(id);
     }
 
 

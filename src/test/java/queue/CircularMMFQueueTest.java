@@ -26,9 +26,10 @@ public class CircularMMFQueueTest {
     public void checkQueueSize() {
 
         MarketData md = new MarketData();
-        md.set("GB00BJLR0J16", 0d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13");
+        md.set("GB00BJLR0J16", 0d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", 0);
         rangeClosed(1, SIZE).forEach(j -> {
             md.setPrice(j);
+            md.setId(j);
             queue.add(md.getData());
         });
         assertEquals(queue.getQueueSize(), SIZE);
@@ -40,9 +41,10 @@ public class CircularMMFQueueTest {
     public void checkQueueSizeAfterConsumerHasReadHalfOfTheQueue() {
 
         MarketData md = new MarketData();
-        md.set("GB00BJLR0J16", 0d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13");
+        md.set("GB00BJLR0J16", 0d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", 0);
         rangeClosed(1, SIZE).forEach(j -> {
             md.setPrice(j);
+            md.setId(j);
             queue.add(md.getData());
         });
         assertEquals(queue.getQueueSize(), SIZE);

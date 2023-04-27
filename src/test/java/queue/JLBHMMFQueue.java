@@ -29,7 +29,7 @@ public class JLBHMMFQueue implements JLBHTask {
         this.jlbh = jlbh;
         try {
             marketData = new MarketData();
-            marketData.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13");
+            marketData.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", 1);
             mmfQueue = MMFQueue.getInstance(marketData.size());
             //     mmfQueue.add(marketData.getData());
         } catch (IOException e) {

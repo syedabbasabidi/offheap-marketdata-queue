@@ -3,13 +3,13 @@ package model;
 import util.ByteArrayUtil;
 import util.ByteUtils;
 
+import static java.lang.String.valueOf;
 import static util.ByteArrayUtil.byteToChar;
-import static util.ByteUtils.bytesToLong;
-import static util.ByteUtils.bytesToSecurity;
+import static util.ByteUtils.*;
 
 public class MarketDataCons {
 
-    private static final int OBJ_SIZE = 45;
+    private static final int OBJ_SIZE = 49;
     private volatile byte[] data;
     private boolean isFirm;
     private int side;
@@ -18,6 +18,8 @@ public class MarketDataCons {
     private char broker[] = new char[3];
     private int priceType;
     private char[] validUntil = new char[19];
+
+    private int id;
 
     public MarketDataCons() {
         data = new byte[OBJ_SIZE];
@@ -45,6 +47,10 @@ public class MarketDataCons {
 
     public char[] getValidUntil() {
         return validUntil;
+    }
+
+    private int getId() {
+        return id;
     }
 
     public void firm() {
@@ -75,6 +81,10 @@ public class MarketDataCons {
         priceType = data[44];
     }
 
+    public void id() {
+        id = bytesToInt(data, 45, 4);
+    }
+
     public void setData(byte[] data) {
         ByteArrayUtil.copy(data, this.data);
         firm();
@@ -84,6 +94,7 @@ public class MarketDataCons {
         validUntil();
         broker();
         priceType();
+        id();
     }
 
     public boolean isFirm() {
@@ -92,7 +103,7 @@ public class MarketDataCons {
 
     @Override
     public String toString() {
-        return String.valueOf(getSec()) + "-" + getPrice() + "-" + getSide() + "-" + (isFirm() ? "Firm" : "LL") + "-" + String.valueOf(getBroker()) + "-" + (getPriceType() == 1 ? "PoP" : "Unknown") + "-" + String.valueOf(getValidUntil());
+        return getId() + "-" + valueOf(getSec()) + "-" + getPrice() + "-" + getSide() + "-" + (isFirm() ? "Firm" : "LL") + "-" + valueOf(getBroker()) + "-" + (getPriceType() == 1 ? "PoP" : "Unknown") + "-" + valueOf(getValidUntil());
     }
 
     public int size() {

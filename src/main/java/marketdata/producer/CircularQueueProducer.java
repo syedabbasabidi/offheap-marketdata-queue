@@ -18,11 +18,12 @@ public class CircularQueueProducer {
         CircularMMFQueue mmfQueue = getInstance(md.size(), "/tmp");
 
         int j = 0;
-        md.set("GB00BJLR0J16", 1d + j, 0, true, (byte) 1, "BRC", "2023-02-14:22:10:13");
+        md.set("GB00BJLR0J16", 1d + j, 0, true, (byte) 1, "BRC", "2023-02-14:22:10:13", j);
         while (true) {
             md.setPrice(1d + j);
             md.side(j % 2 == 0 ? 0 : 1);
             md.setFirm(j % 2 == 0);
+            md.setId(j);
             j = mmfQueue.add(md.getData()) ? j + 1 : j;
             if (j > 0 && j % BATCH_SIZE == 0) pause(mmfQueue, (j / BATCH_SIZE));
 
@@ -32,7 +33,7 @@ public class CircularQueueProducer {
     private static void pause(CircularMMFQueue mmfQueue, int batchNumber) {
         try {
             System.out.println("Wrote batch number " + batchNumber + ", size " + mmfQueue.getQueueSize());
-            Thread.sleep(10_000);
+            Thread.sleep(1_000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
