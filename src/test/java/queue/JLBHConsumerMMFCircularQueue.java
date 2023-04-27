@@ -18,6 +18,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
     private double price = 0;
 
     private Thread producerThread;
+    private byte[] bytes;
 
     public static void main(String[] args) {
 
@@ -50,7 +51,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
 
     @Override
     public void run(long startTimeNS) {
-        circularMMFQueue.get();
+        bytes = circularMMFQueue.get();
         jlbh.sampleNanos((nanoTime() - 20) - startTimeNS);
     }
 

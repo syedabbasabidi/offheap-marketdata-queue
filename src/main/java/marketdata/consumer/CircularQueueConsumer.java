@@ -4,12 +4,10 @@ import model.MarketDataCons;
 import queue.CircularMMFQueue;
 
 import java.io.IOException;
-import java.util.Optional;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.System.getProperty;
 import static java.lang.Thread.interrupted;
-import static queue.CircularMMFQueue.DEFAULT_SIZE;
 
 public class CircularQueueConsumer implements Runnable {
 
@@ -40,8 +38,8 @@ public class CircularQueueConsumer implements Runnable {
 
             if (interrupted() || hasConsumedEnough(totalConsumedMessages)) break;
 
-            Optional<byte[]> bytesOP = mmfQueue.get();
-            bytesOP.ifPresent(bytes -> process(marketData, bytes));
+            byte[] bytes = mmfQueue.get();
+            if (bytes != null) process(marketData, bytes);
             totalConsumedMessages++;
         }
     }

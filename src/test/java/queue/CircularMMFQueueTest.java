@@ -10,7 +10,7 @@ import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static queue.CircularMMFQueue.getInstance;
 
-public class CircularMMFQueueTest {
+public class CircularMMFQueueTest { 
 
     public static final int SIZE = 10;
     private CircularMMFQueue queue;

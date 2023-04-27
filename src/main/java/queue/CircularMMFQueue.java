@@ -5,13 +5,10 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
-import java.util.Optional;
 
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static java.nio.file.Files.delete;
 import static java.util.Arrays.stream;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
 
 public class CircularMMFQueue {
     public static final int DEFAULT_SIZE = 10;
@@ -71,13 +68,11 @@ public class CircularMMFQueue {
     }
 
 
-    public Optional<byte[]> get() {
+    public byte[] get() {
 
         writeIndex = currentWriterIndex();
-        if (!hasNext()) {
-            return empty();
-        }
-        return of(get(readFromIndex()));
+        if (!hasNext()) return null;
+        return get(readFromIndex());
     }
 
     public boolean add(byte[] object) {
@@ -115,6 +110,7 @@ public class CircularMMFQueue {
     }
 
     private byte[] get(int index) {
+
         MappedByteBuffer buffer = queueBuffers[getBuffer(index)];
         buffer.position(getIndexWithinBuffer(index));
         buffer.get(dequedMD, 0, objSize);
