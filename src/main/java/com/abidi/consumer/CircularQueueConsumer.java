@@ -1,6 +1,6 @@
-package com.abidi.marketdata.consumer;
+package com.abidi.consumer;
 
-import com.abidi.model.MarketDataCons;
+import com.abidi.marketdata.model.MarketDataCons;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.abidi.queue.CircularMMFQueue;

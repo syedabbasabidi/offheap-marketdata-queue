@@ -1,4 +1,4 @@
-package com.abidi.model;
+package com.abidi.marketdata.model;
 
 import com.abidi.util.ByteArrayUtil;
 import com.abidi.util.ByteUtils;

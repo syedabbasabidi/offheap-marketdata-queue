@@ -1,6 +1,6 @@
-package com.abidi.marketdata.producer;
+package com.abidi.producer;
 
-import com.abidi.model.MarketData;
+import com.abidi.marketdata.model.MarketData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.abidi.queue.CircularMMFQueue;

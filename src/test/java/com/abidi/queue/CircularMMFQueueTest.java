@@ -1,7 +1,6 @@
 package com.abidi.queue;
 
-import com.abidi.model.MarketData;
-import com.abidi.queue.CircularMMFQueue;
+import com.abidi.marketdata.model.MarketData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

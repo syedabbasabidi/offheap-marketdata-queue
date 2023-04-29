@@ -1,7 +1,7 @@
 package com.abidi.queue;
 
-import com.abidi.marketdata.consumer.CircularQueueConsumer;
-import com.abidi.model.MarketData;
+import com.abidi.consumer.CircularQueueConsumer;
+import com.abidi.marketdata.model.MarketData;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;

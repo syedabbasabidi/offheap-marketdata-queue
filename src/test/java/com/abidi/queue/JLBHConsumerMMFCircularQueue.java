@@ -1,6 +1,6 @@
 package com.abidi.queue;
 
-import com.abidi.model.MarketData;
+import com.abidi.marketdata.model.MarketData;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
