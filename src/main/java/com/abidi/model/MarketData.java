@@ -1,13 +1,12 @@
-package model;
+package com.abidi.model;
 
-import util.ByteArrayUtil;
+import com.abidi.util.ByteArrayUtil;
+import com.abidi.util.ByteUtils;
 
 import java.nio.ByteBuffer;
 
 import static java.nio.ByteBuffer.allocateDirect;
 import static java.util.stream.IntStream.range;
-import static util.ByteUtils.intToBytes;
-import static util.ByteUtils.longToBytes;
 
 public class MarketData {
 
@@ -42,7 +41,7 @@ public class MarketData {
 
     public void setPrice(double price) {
 
-        byte[] bytes = longToBytes((long) (price * 1000));
+        byte[] bytes = ByteUtils.longToBytes((long) (price * 1000));
 
         for (int i = 0, j = 14; i < bytes.length; i++, j++) {
             data[j] = bytes[i];
@@ -72,7 +71,7 @@ public class MarketData {
     }
 
     public void setId(int id) {
-        byte[] bytes = intToBytes(id);
+        byte[] bytes = ByteUtils.intToBytes(id);
         for (int i = 0, j = 45; i < bytes.length; i++, j++) {
             data[j] = bytes[i];
         }

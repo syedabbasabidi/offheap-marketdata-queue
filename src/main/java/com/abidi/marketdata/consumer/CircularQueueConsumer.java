@@ -1,9 +1,9 @@
-package marketdata.consumer;
+package com.abidi.marketdata.consumer;
 
-import model.MarketDataCons;
+import com.abidi.model.MarketDataCons;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import queue.CircularMMFQueue;
+import com.abidi.queue.CircularMMFQueue;
 
 import java.io.IOException;
 

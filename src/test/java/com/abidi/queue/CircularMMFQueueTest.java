@@ -1,6 +1,7 @@
-package queue;
+package com.abidi.queue;
 
-import model.MarketData;
+import com.abidi.model.MarketData;
+import com.abidi.queue.CircularMMFQueue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -8,7 +9,7 @@ import java.io.IOException;
 
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static queue.CircularMMFQueue.getInstance;
+import static com.abidi.queue.CircularMMFQueue.getInstance;
 
 public class CircularMMFQueueTest { 
 

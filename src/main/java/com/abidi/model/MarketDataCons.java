@@ -1,11 +1,9 @@
-package model;
+package com.abidi.model;
 
-import util.ByteArrayUtil;
-import util.ByteUtils;
+import com.abidi.util.ByteArrayUtil;
+import com.abidi.util.ByteUtils;
 
 import static java.lang.String.valueOf;
-import static util.ByteArrayUtil.byteToChar;
-import static util.ByteUtils.*;
 
 public class MarketDataCons {
 
@@ -62,19 +60,19 @@ public class MarketDataCons {
     }
 
     public void security() {
-        byteToChar(bytesToSecurity(data, 2, 12), this.sec);
+        ByteArrayUtil.byteToChar(ByteUtils.bytesToSecurity(data, 2, 12), this.sec);
     }
 
     public void price() {
-        price = (double) bytesToLong(data, 14, 8) / 1000;
+        price = (double) ByteUtils.bytesToLong(data, 14, 8) / 1000;
     }
 
     public void validUntil() {
-        byteToChar(ByteUtils.bytesToDate(data, 22, 19), this.validUntil);
+        ByteArrayUtil.byteToChar(ByteUtils.bytesToDate(data, 22, 19), this.validUntil);
     }
 
     public void broker() {
-        byteToChar(ByteUtils.bytesToBroker(data, 41, 3), this.broker);
+        ByteArrayUtil.byteToChar(ByteUtils.bytesToBroker(data, 41, 3), this.broker);
     }
 
     public void priceType() {
@@ -82,7 +80,7 @@ public class MarketDataCons {
     }
 
     public void id() {
-        id = bytesToInt(data, 45, 4);
+        id = ByteUtils.bytesToInt(data, 45, 4);
     }
 
     public void setData(byte[] data) {

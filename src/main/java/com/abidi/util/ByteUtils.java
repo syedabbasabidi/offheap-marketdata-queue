@@ -1,4 +1,4 @@
-package util;
+package com.abidi.util;
 
 import java.nio.ByteBuffer;
 

@@ -1,7 +1,7 @@
-package queue;
+package com.abidi.queue;
 
-import marketdata.consumer.CircularQueueConsumer;
-import model.MarketData;
+import com.abidi.marketdata.consumer.CircularQueueConsumer;
+import com.abidi.model.MarketData;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 import static java.lang.System.nanoTime;
-import static queue.CircularMMFQueue.getInstance;
+import static com.abidi.queue.CircularMMFQueue.getInstance;
 
 public class JLBHMMFCircularQueue implements JLBHTask {
 

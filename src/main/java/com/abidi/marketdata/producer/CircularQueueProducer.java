@@ -1,13 +1,13 @@
-package marketdata.producer;
+package com.abidi.marketdata.producer;
 
-import model.MarketData;
+import com.abidi.model.MarketData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import queue.CircularMMFQueue;
+import com.abidi.queue.CircularMMFQueue;
 
 import java.io.IOException;
 
-import static queue.CircularMMFQueue.getInstance;
+import static com.abidi.queue.CircularMMFQueue.getInstance;
 
 public class CircularQueueProducer {
 
