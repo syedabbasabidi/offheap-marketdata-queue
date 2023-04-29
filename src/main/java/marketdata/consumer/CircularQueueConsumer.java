@@ -1,6 +1,8 @@
 package marketdata.consumer;
 
 import model.MarketDataCons;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import queue.CircularMMFQueue;
 
 import java.io.IOException;
@@ -12,12 +14,15 @@ import static java.lang.Thread.interrupted;
 public class CircularQueueConsumer implements Runnable {
 
     private final int howManyToConsume;
+    private static final Logger LOG = LoggerFactory.getLogger(CircularQueueConsumer.class);
 
     public CircularQueueConsumer(int howManyToConsumer) {
         this.howManyToConsume = howManyToConsumer == -1 ? parseInt(getProperty("concount", "-1")) : -1;
     }
 
     public static void main(String[] args) {
+
+        LOG.info("Starting consumer ...");
         CircularQueueConsumer circularQueueConsumer = new CircularQueueConsumer(args.length > 0 ? parseInt(args[0]) : -1);
         circularQueueConsumer.run();
     }
@@ -29,10 +34,9 @@ public class CircularQueueConsumer implements Runnable {
 
     public void run() {
 
-        System.out.println("Consumer starting...");
         MarketDataCons marketData = new MarketDataCons();
         CircularMMFQueue mmfQueue = getInstance(marketData);
-        System.out.println("Reading to consume");
+        LOG.info("Reading to consume");
         int totalConsumedMessages = 0;
         while (true) {
 
@@ -47,14 +51,14 @@ public class CircularQueueConsumer implements Runnable {
 
     private static void process(MarketDataCons marketData, byte[] data) {
         marketData.setData(data);
-        System.out.println(marketData);
+        LOG.debug("Message received {}", marketData);
     }
 
     private static CircularMMFQueue getInstance(MarketDataCons marketData) {
         try {
             return CircularMMFQueue.getInstance(marketData.size(), "/tmp");
         } catch (IOException e) {
-            System.out.println(e);
+            LOG.error("Failed to set up queue", e);
             return null;
         }
     }

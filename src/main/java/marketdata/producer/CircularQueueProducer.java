@@ -1,19 +1,22 @@
 package marketdata.producer;
 
 import model.MarketData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import queue.CircularMMFQueue;
 
 import java.io.IOException;
 
-import static queue.CircularMMFQueue.DEFAULT_SIZE;
 import static queue.CircularMMFQueue.getInstance;
 
 public class CircularQueueProducer {
 
     public static final int BATCH_SIZE = 10;
+    private static final Logger LOG = LoggerFactory.getLogger(CircularQueueProducer.class);
 
     public static void main(String[] args) throws IOException {
 
+        LOG.info("Starting producer...");
         MarketData md = new MarketData();
         CircularMMFQueue mmfQueue = getInstance(md.size(), "/tmp");
 
@@ -32,10 +35,10 @@ public class CircularQueueProducer {
 
     private static void pause(CircularMMFQueue mmfQueue, int batchNumber) {
         try {
-            System.out.println("Wrote batch number " + batchNumber + ", size " + mmfQueue.getQueueSize());
+            LOG.info("Wrote batch number " + batchNumber + ", size " + mmfQueue.getQueueSize());
             Thread.sleep(1_000);
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            LOG.error("Failed to pause", e);
         }
     }
 

@@ -1,5 +1,8 @@
 package queue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
@@ -11,7 +14,7 @@ import static java.nio.file.Files.delete;
 import static java.util.Arrays.stream;
 
 public class CircularMMFQueue {
-    public static final int DEFAULT_SIZE = 10;
+    public static final int DEFAULT_SIZE = 100_000;
     private static final String NAME = "FAST_QUEUE";
 
     private final int objSize;
@@ -32,6 +35,8 @@ public class CircularMMFQueue {
     private final String queuePath;
     private final String queueWriterContextPath;
     private final String queueReaderContextPath;
+
+    private static final Logger LOG = LoggerFactory.getLogger(CircularMMFQueue.class);
 
     public CircularMMFQueue(int objSize, int queueCapacity, String path) throws IOException {
 
@@ -64,7 +69,7 @@ public class CircularMMFQueue {
         }
 
         dequedMD = new byte[objSize];
-        System.out.println("Queue initialized with size " + queueCapacity);
+        LOG.info("Queue is setup with size {}", queueCapacity);
     }
 
 
@@ -157,6 +162,8 @@ public class CircularMMFQueue {
 
     public void reset() {
         stream(this.queueBuffers).forEach(MappedByteBuffer::clear);
+        this.readerContextBuffer.putInt(0, 0);
+        this.writerContextBuffer.putInt(0, 0);
         this.readerContextBuffer.clear();
         this.writerContextBuffer.clear();
         this.readIndex = 0;
@@ -170,7 +177,7 @@ public class CircularMMFQueue {
             queueReaderContextChannel.force(true);
             queueWriterContextChannel.force(true);
         } catch (Exception exp) {
-            System.out.println(exp);
+            LOG.error("Exception flushing queue", exp);
         }
     }
 
@@ -188,7 +195,7 @@ public class CircularMMFQueue {
             delete(Path.of(queueReaderContextPath));
             delete(Path.of(queueWriterContextPath));
         } catch (IOException e) {
-            System.out.println("Failed to close underlying file" + e);
+            LOG.error("Failed to close underlying file", e);
         }
     }
 }
