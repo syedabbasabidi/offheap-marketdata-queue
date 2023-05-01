@@ -51,15 +51,14 @@ public class JLBHMMFCircularQueue implements JLBHTask {
 
     @Override
     public void run(long startTimeNS) {
-        marketData.setPrice(++price);
         circularMMFQueue.add(marketData.getData());
-        jlbh.sampleNanos((nanoTime() - 20) - startTimeNS);
+        jlbh.sampleNanos((nanoTime() - 10) - startTimeNS);
     }
 
     @Override
     public void complete() {
         consumerThread.interrupt();
-        LOG.info("Number of messages wrriten {} and read {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead());
+        LOG.info("Number of messages writen {} and read {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead());
     }
 
 }

@@ -124,8 +124,8 @@ public class CircularMMFQueue {
         return dequedMD;
     }
 
-    private int currentReaderIndex() {
-        return readerContextBuffer.getInt(0);
+    private long currentReaderIndex() {
+        return readerContextBuffer.getLong(0);
     }
 
     private void updateWriterContext() {
@@ -140,23 +140,23 @@ public class CircularMMFQueue {
         return readIndex < writeIndex;
     }
 
-    private int currentWriterIndex() {
-        return writerContextBuffer.getInt(0);
+    private long currentWriterIndex() {
+        return writerContextBuffer.getLong(0);
     }
 
     public static CircularMMFQueue getInstance(int objSize, String path) throws IOException {
         return new CircularMMFQueue(objSize, DEFAULT_SIZE, path);
     }
 
-    public int getQueueSize() {
+    public long getQueueSize() {
         return currentWriterIndex() - currentReaderIndex();
     }
 
-    public int messagesWritten() {
+    public long messagesWritten() {
         return currentWriterIndex();
     }
 
-    public int messagesRead() {
+    public long messagesRead() {
         return currentReaderIndex();
     }
 
