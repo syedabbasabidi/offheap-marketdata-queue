@@ -29,8 +29,8 @@ public class CircularMMFQueue {
     private final FileChannel queueWriterContextChannel;
     private final int bufferObjCapacity;
     private final FileChannel queueReaderContextChannel;
-    private volatile int writeIndex;
-    private volatile int readIndex;
+    private volatile long writeIndex;
+    private volatile long readIndex;
     private byte[] dequedMD;
     private final String queuePath;
     private final String queueWriterContextPath;
@@ -55,9 +55,9 @@ public class CircularMMFQueue {
         queueWriterContext = new RandomAccessFile(queueWriterContextPath, "rw");
         queueReaderContext = new RandomAccessFile(queueReaderContextPath, "rw");
         queueWriterContextChannel = queueWriterContext.getChannel();
-        writerContextBuffer = queueWriterContextChannel.map(READ_WRITE, 0, 4);
+        writerContextBuffer = queueWriterContextChannel.map(READ_WRITE, 0, 8);
         queueReaderContextChannel = queueReaderContext.getChannel();
-        readerContextBuffer = queueReaderContextChannel.map(READ_WRITE, 0, 4);
+        readerContextBuffer = queueReaderContextChannel.map(READ_WRITE, 0, 8);
         writeIndex = currentWriterIndex();
         readIndex = currentReaderIndex();
 
@@ -129,11 +129,11 @@ public class CircularMMFQueue {
     }
 
     private void updateWriterContext() {
-        writerContextBuffer.putInt(0, writeIndex + 1);
+        writerContextBuffer.putLong(0, writeIndex + 1);
     }
 
     private void updateReaderContext() {
-        readerContextBuffer.putInt(0, readIndex + 1);
+        readerContextBuffer.putLong(0, readIndex + 1);
     }
 
     private boolean hasNext() {

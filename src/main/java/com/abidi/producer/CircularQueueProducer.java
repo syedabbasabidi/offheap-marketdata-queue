@@ -19,6 +19,7 @@ public class CircularQueueProducer {
         LOG.info("Starting producer...");
         MarketData md = new MarketData();
         CircularMMFQueue mmfQueue = getInstance(md.size(), "/tmp");
+        mmfQueue.reset();
 
         int j = 0;
         md.set("GB00BJLR0J16", 1d + j, 0, true, (byte) 1, "BRC", "2023-02-14:22:10:13", j);
@@ -28,14 +29,14 @@ public class CircularQueueProducer {
             md.setFirm(j % 2 == 0);
             md.setId(j);
             j = mmfQueue.add(md.getData()) ? j + 1 : j;
-            if (j > 0 && j % BATCH_SIZE == 0) pause(mmfQueue, (j / BATCH_SIZE));
+           // if (j > 0 && j % BATCH_SIZE == 0) pause(mmfQueue, (j / BATCH_SIZE));
 
         }
     }
 
     private static void pause(CircularMMFQueue mmfQueue, int batchNumber) {
         try {
-            LOG.info("Wrote batch number " + batchNumber + ", size " + mmfQueue.getQueueSize());
+            LOG.info("Wrote batch number {} , size {}", batchNumber, mmfQueue.getQueueSize());
             Thread.sleep(1_000);
         } catch (InterruptedException e) {
             LOG.error("Failed to pause", e);

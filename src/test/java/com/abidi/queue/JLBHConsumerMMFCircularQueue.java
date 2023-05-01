@@ -24,7 +24,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
     public static void main(String[] args) {
 
         JLBHOptions jlbhOptions = new JLBHOptions()
-                .warmUpIterations(10_000).iterations(1_000_000).throughput(1_000_000).accountForCoordinatedOmission(false)
+                .warmUpIterations(10_000).iterations(5_000_000).throughput(1_000_000).runs(3).accountForCoordinatedOmission(false)
                 .recordOSJitter(false).jlbhTask(new JLBHConsumerMMFCircularQueue());
 
         new JLBH(jlbhOptions).start();
