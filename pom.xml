@@ -4,7 +4,7 @@
 
     <groupId>com.abidi</groupId>
     <artifactId>offheap-marketdata-queue</artifactId>
-    <version>0.1</version>
+    <version>1.0-SNAPSHOT</version>
     <scm>
         <developerConnection>scm:git:ssh://git@github.com:syedabbasabidi/offheap-marketdata-queue.git</developerConnection>
         <url>https://github.com/syedabbasabidi/offheap-marketdata-queue.git</url>
