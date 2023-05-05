@@ -4,11 +4,13 @@ import com.abidi.marketdata.model.MarketData;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static java.lang.System.nanoTime;
 import static com.abidi.queue.CircularMMFQueue.getInstance;
+import static java.lang.System.nanoTime;
 
 public class JLBHConsumerMMFCircularQueue implements JLBHTask {
 
@@ -20,6 +22,9 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
     private Thread producerThread;
     private byte[] bytes;
     private int id;
+
+    private static final Logger LOG = LoggerFactory.getLogger(JLBHConsumerMMFCircularQueue.class);
+
 
     public static void main(String[] args) {
 
@@ -54,12 +59,12 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
     @Override
     public void run(long startTimeNS) {
         bytes = circularMMFQueue.get();
-        jlbh.sampleNanos((nanoTime() - 20) - startTimeNS);
+        jlbh.sampleNanos((nanoTime() - 10) - startTimeNS);
     }
 
     @Override
     public void complete() {
-        System.out.println(circularMMFQueue.messagesWritten() + "     " + circularMMFQueue.messagesRead());
+        LOG.info("Number of messages writen {} and read {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead());
     }
 
 }
