@@ -6,7 +6,7 @@
     <artifactId>offheap-marketdata-queue</artifactId>
     <version>1.0-SNAPSHOT</version>
     <scm>
-        <developerConnection>scm:git:ssh://git@github.com:syedabbasabidi/offheap-marketdata-queue.git</developerConnection>
+        <developerConnection>scm:git:git://github.com:syedabbasabidi:offheap-marketdata-queue.git</developerConnection>
         <url>https://github.com/syedabbasabidi/offheap-marketdata-queue.git</url>
       <tag>offheap-marketdata-queue-0.1</tag>
   </scm>
