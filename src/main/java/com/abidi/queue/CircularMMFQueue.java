@@ -168,8 +168,9 @@ public class CircularMMFQueue {
         this.writerContextBuffer.clear();
         this.readIndex = 0;
         this.writeIndex = 0;
-        this.updateReaderContext();
-        this.updateWriterContext();
+        readerContextBuffer.putLong(0, readIndex);
+        writerContextBuffer.putLong(0, writeIndex);
+
     }
 
 
