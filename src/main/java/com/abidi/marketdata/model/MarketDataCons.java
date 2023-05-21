@@ -47,7 +47,7 @@ public class MarketDataCons {
         return validUntil;
     }
 
-    private int getId() {
+    public int getId() {
         return id;
     }
 
