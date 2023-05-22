@@ -37,6 +37,7 @@ public class CircularMMFQueue {
     private final String queueReaderContextPath;
 
     private static final Logger LOG = LoggerFactory.getLogger(CircularMMFQueue.class);
+    private int indexToAck = -1;
 
     public CircularMMFQueue(int objSize, int queueCapacity, String path) throws IOException {
 
@@ -75,9 +76,16 @@ public class CircularMMFQueue {
 
     public byte[] get() {
 
+        if (hasIndexAwaitingAck()) return null;
+
         writeIndex = currentWriterIndex();
         if (!hasNext()) return null;
-        return get(readFromIndex());
+        int index = readFromIndex();
+        MappedByteBuffer buffer = queueBuffers[getBuffer(index)];
+        buffer.position(getIndexWithinBuffer(index));
+        buffer.get(dequedMD, 0, objSize);
+        flushReaderIndex();
+        return dequedMD;
     }
 
     public boolean add(byte[] object) {
@@ -90,6 +98,35 @@ public class CircularMMFQueue {
         updateWriterContext();
         writeIndex++; // flush store buffers
         return true;
+    }
+
+    public byte[] getWithoutAck() {
+
+        if (hasIndexAwaitingAck()) return null;
+
+        writeIndex = currentWriterIndex();
+        if (!hasNext()) return null;
+        int index = readFromIndex();
+        indexToAck = index;
+        MappedByteBuffer buffer = queueBuffers[getBuffer(index)];
+        buffer.position(getIndexWithinBuffer(index));
+        buffer.get(dequedMD, 0, objSize);
+        return dequedMD;
+    }
+
+    private boolean hasIndexAwaitingAck() {
+        if (indexToAck == -1) {
+            LOG.info("Index {} hasn't been acked yet", indexToAck);
+            return true;
+        }
+        return false;
+    }
+
+    public void ack() {
+        if (indexToAck == currentReaderIndex()) {
+            flushReaderIndex();
+            indexToAck = -1;
+        }
     }
 
     private int readFromIndex() {
@@ -114,14 +151,10 @@ public class CircularMMFQueue {
         return (index % bufferObjCapacity) * objSize;
     }
 
-    private byte[] get(int index) {
 
-        MappedByteBuffer buffer = queueBuffers[getBuffer(index)];
-        buffer.position(getIndexWithinBuffer(index));
-        buffer.get(dequedMD, 0, objSize);
+    private void flushReaderIndex() {
         updateReaderContext();
         readIndex++; //flush store buffers
-        return dequedMD;
     }
 
     private long currentReaderIndex() {
