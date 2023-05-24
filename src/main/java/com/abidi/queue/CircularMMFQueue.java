@@ -115,7 +115,7 @@ public class CircularMMFQueue {
     }
 
     private boolean hasIndexAwaitingAck() {
-        if (indexToAck == -1) {
+        if (indexToAck != -1) {
             LOG.info("Index {} hasn't been acked yet", indexToAck);
             return true;
         }
@@ -123,7 +123,7 @@ public class CircularMMFQueue {
     }
 
     public void ack() {
-        if (indexToAck == currentReaderIndex()) {
+        if (indexToAck == readFromIndex()) {
             flushReaderIndex();
             indexToAck = -1;
         }
