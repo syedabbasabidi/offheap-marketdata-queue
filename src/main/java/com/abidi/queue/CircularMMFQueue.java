@@ -79,7 +79,10 @@ public class CircularMMFQueue {
         if (hasIndexAwaitingAck()) return null;
 
         writeIndex = currentWriterIndex();
-        if (!hasNext()) return null;
+        if (!hasNext()) {
+            LOG.debug("Queue is empty");
+            return null;
+        }
         int index = readFromIndex();
         MappedByteBuffer buffer = queueBuffers[getBuffer(index)];
         buffer.position(getIndexWithinBuffer(index));
@@ -90,7 +93,10 @@ public class CircularMMFQueue {
 
     public boolean add(byte[] object) {
 
-        if ((writeIndex - currentReaderIndex()) >= (queueCapacity)) return false;
+        if ((writeIndex - currentReaderIndex()) >= (queueCapacity)) {
+            LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
+            return false;
+        }
 
         MappedByteBuffer buffer = queueBuffers[getBuffer(writeAtIndex())];
         buffer.position(getIndexWithinBuffer(writeAtIndex()));
@@ -105,7 +111,10 @@ public class CircularMMFQueue {
         if (hasIndexAwaitingAck()) return null;
 
         writeIndex = currentWriterIndex();
-        if (!hasNext()) return null;
+        if (!hasNext()) {
+            LOG.debug("Queue is empty");
+            return null;
+        }
         int index = readFromIndex();
         indexToAck = index;
         MappedByteBuffer buffer = queueBuffers[getBuffer(index)];
