@@ -31,7 +31,7 @@ public class CircularMMFQueue {
     private final FileChannel queueReaderContextChannel;
     private volatile long writeIndex;
     private volatile long readIndex;
-    private byte[] lastDequedMsg;
+    private final byte[] lastDequedMsg;
     private final String queuePath;
     private final String queueWriterContextPath;
     private final String queueReaderContextPath;
@@ -76,15 +76,16 @@ public class CircularMMFQueue {
 
     public byte[] get() {
 
+        if (isInBadState()) return null;
+
         if (hasAnIndexAwaitingAck()) return null;
 
-        writeIndex = currentWriterIndex();
         if (!hasNext()) {
             LOG.debug("Queue is empty");
             return null;
         }
         int index = readFromIndex();
-        MappedByteBuffer buffer = queueBuffers[getBuffer(index)];
+        MappedByteBuffer buffer = queueBuffers[getBufferIndex(index)];
         buffer.position(getIndexWithinBuffer(index));
         buffer.get(lastDequedMsg, 0, msgLength);
         flushReaderIndex();
@@ -93,12 +94,14 @@ public class CircularMMFQueue {
 
     public boolean add(byte[] object) {
 
+        if (isInBadState()) return false;
+
         if ((writeIndex - currentReaderIndex()) >= (queueCapacity)) {
-            LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
+            LOG.info("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
             return false;
         }
 
-        MappedByteBuffer buffer = queueBuffers[getBuffer(writeAtIndex())];
+        MappedByteBuffer buffer = queueBuffers[getBufferIndex(writeAtIndex())];
         buffer.position(getIndexWithinBuffer(writeAtIndex()));
         buffer.put(object, 0, object.length);
         updateWriterContext();
@@ -106,18 +109,27 @@ public class CircularMMFQueue {
         return true;
     }
 
+    private boolean isInBadState() {
+        if (currentWriterIndex() > currentWriterIndex()) {
+            LOG.error("Queue is invalid state, read has read more messages than written");
+            return true;
+        }
+        return false;
+    }
+
     public byte[] getWithoutAck() {
+
+        if (isInBadState()) return null;
 
         if (hasAnIndexAwaitingAck()) return null;
 
-        writeIndex = currentWriterIndex();
         if (!hasNext()) {
             LOG.debug("Queue is empty");
             return null;
         }
         int index = readFromIndex();
         indexToAck = index;
-        MappedByteBuffer buffer = queueBuffers[getBuffer(index)];
+        MappedByteBuffer buffer = queueBuffers[getBufferIndex(index)];
         buffer.position(getIndexWithinBuffer(index));
         buffer.get(lastDequedMsg, 0, msgLength);
         return lastDequedMsg;
@@ -147,7 +159,7 @@ public class CircularMMFQueue {
     }
 
 
-    private int getBuffer(int index) {
+    private int getBufferIndex(int index) {
         int ret = index / bufferObjCapacity;
         if (ret >= queueBuffers.length) {
             throw new IndexOutOfBoundsException("Index doesn't exist");
@@ -180,7 +192,7 @@ public class CircularMMFQueue {
     }
 
     private boolean hasNext() {
-        return readIndex < writeIndex;
+        return readIndex < currentWriterIndex();
     }
 
     private long currentWriterIndex() {

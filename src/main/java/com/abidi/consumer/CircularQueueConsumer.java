@@ -1,9 +1,9 @@
 package com.abidi.consumer;
 
 import com.abidi.marketdata.model.MarketDataCons;
+import com.abidi.queue.CircularMMFQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.abidi.queue.CircularMMFQueue;
 
 import java.io.IOException;
 
@@ -43,8 +43,10 @@ public class CircularQueueConsumer implements Runnable {
             if (interrupted() || hasConsumedEnough(totalConsumedMessages)) break;
 
             byte[] bytes = mmfQueue.get();
-            if (bytes != null) process(marketData, bytes);
-            totalConsumedMessages++;
+            if (bytes != null) {
+                process(marketData, bytes);
+                totalConsumedMessages++;
+            }
         }
     }
 
