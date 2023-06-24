@@ -17,8 +17,12 @@ public class MarketData {
     private final ByteBuffer brokerMapper = allocateDirect(3);
     private final ByteBuffer dateMapper = allocateDirect(19);
 
-    public MarketData() {
+    private final ByteUtils byteUtils;
+
+    public MarketData(ByteUtils byteUtils)
+    {
         data = new byte[OBJ_SIZE];
+        this.byteUtils = byteUtils;
     }
 
     public void setData(byte[] data) {
@@ -41,7 +45,7 @@ public class MarketData {
 
     public void setPrice(double price) {
 
-        byte[] bytes = ByteUtils.longToBytes((long) (price * 1000));
+        byte[] bytes = byteUtils.longToBytes((long) (price * 1000));
 
         for (int i = 0, j = 14; i < bytes.length; i++, j++) {
             data[j] = bytes[i];
@@ -71,7 +75,7 @@ public class MarketData {
     }
 
     public void setId(int id) {
-        byte[] bytes = ByteUtils.intToBytes(id);
+        byte[] bytes = byteUtils.intToBytes(id);
         for (int i = 0, j = 45; i < bytes.length; i++, j++) {
             data[j] = bytes[i];
         }

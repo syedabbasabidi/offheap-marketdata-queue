@@ -1,9 +1,10 @@
 package com.abidi.producer;
 
 import com.abidi.marketdata.model.MarketData;
+import com.abidi.queue.CircularMMFQueue;
+import com.abidi.util.ByteUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.abidi.queue.CircularMMFQueue;
 
 import java.io.IOException;
 
@@ -17,7 +18,7 @@ public class CircularQueueProducer {
     public static void main(String[] args) throws IOException {
 
         LOG.info("Starting producer...");
-        MarketData md = new MarketData();
+        MarketData md = new MarketData(new ByteUtils());
         CircularMMFQueue mmfQueue = getInstance(md.size(), "/tmp");
         mmfQueue.reset();
 
@@ -29,7 +30,7 @@ public class CircularQueueProducer {
             md.setFirm(j % 2 == 0);
             md.setId(j);
             j = mmfQueue.add(md.getData()) ? j + 1 : j;
-           // if (j > 0 && j % BATCH_SIZE == 0) pause(mmfQueue, (j / BATCH_SIZE));
+            // if (j > 0 && j % BATCH_SIZE == 0) pause(mmfQueue, (j / BATCH_SIZE));
 
         }
     }

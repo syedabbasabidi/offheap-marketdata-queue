@@ -2,6 +2,7 @@ package com.abidi.consumer;
 
 import com.abidi.marketdata.model.MarketDataCons;
 import com.abidi.queue.CircularMMFQueue;
+import com.abidi.util.ByteUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,8 +16,10 @@ public class CircularQueueConsumer implements Runnable {
 
     private final int howManyToConsume;
     private static final Logger LOG = LoggerFactory.getLogger(CircularQueueConsumer.class);
+    private final ByteUtils byteUtils;
 
     public CircularQueueConsumer(int howManyToConsumer) {
+        byteUtils = new ByteUtils();
         this.howManyToConsume = howManyToConsumer == -1 ? parseInt(getProperty("concount", "-1")) : -1;
     }
 
@@ -34,7 +37,7 @@ public class CircularQueueConsumer implements Runnable {
 
     public void run() {
 
-        MarketDataCons marketData = new MarketDataCons();
+        MarketDataCons marketData = new MarketDataCons(byteUtils);
         CircularMMFQueue mmfQueue = getInstance(marketData);
         LOG.info("Reading to consume");
         int totalConsumedMessages = 0;

@@ -1,6 +1,7 @@
 package com.abidi.queue;
 
 import com.abidi.marketdata.model.MarketData;
+import com.abidi.util.ByteUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,10 +15,12 @@ public class CircularMMFQueueTest {
 
     public static final int SIZE = 10;
     private CircularMMFQueue queue;
+    private ByteUtils byteUtils;
 
     @BeforeEach
     public void setup() throws IOException {
-        MarketData md = new MarketData();
+        byteUtils = new ByteUtils();
+        MarketData md = new MarketData(byteUtils);
         queue = getInstance(md.size(), "/tmp");
         queue.cleanup();
     }
@@ -25,7 +28,7 @@ public class CircularMMFQueueTest {
     @Test
     public void checkQueueSize() {
 
-        MarketData md = new MarketData();
+        MarketData md = new MarketData(byteUtils);
         md.set("GB00BJLR0J16", 0d, 1, true, (byte) 1, "BRC", "2023-01-14:22:10:13", 0);
         rangeClosed(1, SIZE).forEach(j -> {
             md.setPrice(j);
@@ -40,7 +43,7 @@ public class CircularMMFQueueTest {
     @Test
     public void checkQueueSizeAfterConsumerHasReadHalfOfTheQueue() {
 
-        MarketData md = new MarketData();
+        MarketData md = new MarketData(byteUtils);
         md.set("GB00BJLR0J16", 0d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", 0);
         rangeClosed(1, SIZE).forEach(j -> {
             md.setPrice(j);

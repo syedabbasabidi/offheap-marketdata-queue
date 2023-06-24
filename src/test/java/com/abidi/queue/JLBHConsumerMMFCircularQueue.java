@@ -1,6 +1,7 @@
 package com.abidi.queue;
 
 import com.abidi.marketdata.model.MarketData;
+import com.abidi.util.ByteUtils;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
@@ -39,7 +40,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
     public void init(JLBH jlbh) {
 
         this.jlbh = jlbh;
-        md = new MarketData();
+        md = new MarketData(new ByteUtils());
         md.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", id);
         try {
             circularMMFQueue = getInstance(md.size(), "/tmp");

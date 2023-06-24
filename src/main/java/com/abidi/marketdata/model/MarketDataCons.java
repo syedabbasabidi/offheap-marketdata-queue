@@ -8,6 +8,7 @@ import static java.lang.String.valueOf;
 public class MarketDataCons {
 
     private static final int OBJ_SIZE = 49;
+    private final ByteUtils byteUtils;
     private volatile byte[] data;
     private boolean isFirm;
     private int side;
@@ -19,7 +20,8 @@ public class MarketDataCons {
 
     private int id;
 
-    public MarketDataCons() {
+    public MarketDataCons(ByteUtils byteUtils) {
+        this.byteUtils = byteUtils;
         data = new byte[OBJ_SIZE];
     }
 
@@ -60,19 +62,19 @@ public class MarketDataCons {
     }
 
     public void security() {
-        ByteArrayUtil.byteToChar(ByteUtils.bytesToSecurity(data, 2, 12), this.sec);
+        ByteArrayUtil.byteToChar(byteUtils.bytesToSecurity(data, 2, 12), this.sec);
     }
 
     public void price() {
-        price = (double) ByteUtils.bytesToLong(data, 14, 8) / 1000;
+        price = (double) byteUtils.bytesToLong(data, 14, 8) / 1000;
     }
 
     public void validUntil() {
-        ByteArrayUtil.byteToChar(ByteUtils.bytesToDate(data, 22, 19), this.validUntil);
+        ByteArrayUtil.byteToChar(byteUtils.bytesToDate(data, 22, 19), this.validUntil);
     }
 
     public void broker() {
-        ByteArrayUtil.byteToChar(ByteUtils.bytesToBroker(data, 41, 3), this.broker);
+        ByteArrayUtil.byteToChar(byteUtils.bytesToBroker(data, 41, 3), this.broker);
     }
 
     public void priceType() {
@@ -80,7 +82,7 @@ public class MarketDataCons {
     }
 
     public void id() {
-        id = ByteUtils.bytesToInt(data, 45, 4);
+        id = byteUtils.bytesToInt(data, 45, 4);
     }
 
     public void setData(byte[] data) {
