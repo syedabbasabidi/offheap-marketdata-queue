@@ -12,7 +12,6 @@ import static com.abidi.queue.CircularMMFQueue.getInstance;
 
 public class CircularQueueProducer {
 
-    public static final int BATCH_SIZE = 10;
     private static final Logger LOG = LoggerFactory.getLogger(CircularQueueProducer.class);
 
     public static void main(String[] args) throws IOException {

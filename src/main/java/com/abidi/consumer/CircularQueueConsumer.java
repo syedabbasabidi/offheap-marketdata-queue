@@ -8,31 +8,20 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static java.lang.Integer.parseInt;
-import static java.lang.System.getProperty;
-import static java.lang.Thread.interrupted;
-
 public class CircularQueueConsumer implements Runnable {
 
-    private final int howManyToConsume;
     private static final Logger LOG = LoggerFactory.getLogger(CircularQueueConsumer.class);
     private final ByteUtils byteUtils;
 
-    public CircularQueueConsumer(int howManyToConsumer) {
+    public CircularQueueConsumer() {
         byteUtils = new ByteUtils();
-        this.howManyToConsume = howManyToConsumer == -1 ? parseInt(getProperty("concount", "-1")) : -1;
     }
 
     public static void main(String[] args) {
 
         LOG.info("Starting consumer ...");
-        CircularQueueConsumer circularQueueConsumer = new CircularQueueConsumer(args.length > 0 ? parseInt(args[0]) : -1);
+        CircularQueueConsumer circularQueueConsumer = new CircularQueueConsumer();
         circularQueueConsumer.run();
-    }
-
-    private boolean hasConsumedEnough(int totalConsumedMessages) {
-        if (howManyToConsume == -1) return false;
-        return howManyToConsume <= totalConsumedMessages;
     }
 
     public void run() {
@@ -40,15 +29,10 @@ public class CircularQueueConsumer implements Runnable {
         MarketDataCons marketData = new MarketDataCons(byteUtils);
         CircularMMFQueue mmfQueue = getInstance(marketData);
         LOG.info("Reading to consume");
-        int totalConsumedMessages = 0;
         while (true) {
-
-            if (interrupted() || hasConsumedEnough(totalConsumedMessages)) break;
-
             byte[] bytes = mmfQueue.get();
             if (bytes != null) {
                 process(marketData, bytes);
-                totalConsumedMessages++;
             }
         }
     }

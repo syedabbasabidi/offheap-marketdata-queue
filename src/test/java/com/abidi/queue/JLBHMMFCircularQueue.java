@@ -43,7 +43,7 @@ public class JLBHMMFCircularQueue implements JLBHTask {
         try {
             circularMMFQueue = getInstance(marketData.size(), "/tmp");
             circularMMFQueue.reset();
-            consumerThread = new Thread(new CircularQueueConsumer(-1));
+            consumerThread = new Thread(new CircularQueueConsumer());
             consumerThread.start();
         } catch (IOException e) {
             System.out.println(e);
