@@ -61,8 +61,6 @@ public class CircularMMFQueue {
         readerContextBuffer = queueReaderContextChannel.map(READ_WRITE, 0, 8);
         writeIndex = currentWriterIndex();
         readIndex = currentReaderIndex();
-
-
         queueChannel = queue.getChannel();
 
         for (int i = 0; i < numberOfBuffers; i++) {
@@ -110,8 +108,8 @@ public class CircularMMFQueue {
     }
 
     private boolean isInBadState() {
-        if (currentWriterIndex() > currentWriterIndex()) {
-            LOG.error("Queue is invalid state, read has read more messages than written");
+        if (currentReaderIndex() > currentWriterIndex()) {
+            LOG.error("Queue is invalid state, reader has read more messages than written");
             return true;
         }
         return false;
