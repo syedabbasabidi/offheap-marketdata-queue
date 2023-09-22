@@ -14,7 +14,7 @@ import java.io.IOException;
 import static com.abidi.queue.CircularMMFQueue.getInstance;
 import static java.lang.System.nanoTime;
 
-public class JLBHMMFCircularQueue implements JLBHTask {
+public class JLBHProducerMMFCircularQueue implements JLBHTask {
 
     private JLBH jlbh;
     private CircularMMFQueue circularMMFQueue;
@@ -23,13 +23,13 @@ public class JLBHMMFCircularQueue implements JLBHTask {
 
     private Thread consumerThread;
 
-    private static final Logger LOG = LoggerFactory.getLogger(JLBHMMFCircularQueue.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JLBHProducerMMFCircularQueue.class);
 
     public static void main(String[] args) {
 
         JLBHOptions jlbhOptions = new JLBHOptions()
                 .warmUpIterations(10_000).iterations(5_000_000).throughput(1_000_000).runs(3).accountForCoordinatedOmission(false)
-                .recordOSJitter(false).jlbhTask(new JLBHMMFCircularQueue());
+                .recordOSJitter(false).jlbhTask(new JLBHProducerMMFCircularQueue());
 
         new JLBH(jlbhOptions).start();
     }
