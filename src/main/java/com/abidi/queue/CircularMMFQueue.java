@@ -48,7 +48,6 @@ public class CircularMMFQueue {
         queueReaderContextPath = path + "/" + NAME + "-reader-context.txt";
         queueWriterContextPath = path + "/" + NAME + "-writer-context.txt";
 
-        numberOfMessagesPerBuffer = Integer.MAX_VALUE / msgSize;
         long totalBytesRequiredToAccommodateCapacity = (long) msgSize * queueCapacity;
         int numberOfBuffers = (int) Math.ceil((double) totalBytesRequiredToAccommodateCapacity / (double) Integer.MAX_VALUE);
         queueBuffers = new MappedByteBuffer[numberOfBuffers];
@@ -68,6 +67,8 @@ public class CircularMMFQueue {
         }
 
         lastDequedMsg = new byte[msgSize];
+        numberOfMessagesPerBuffer = Integer.MAX_VALUE / msgSize;
+
         LOG.info("Queue is setup with size {}, reader is at {}, writer is at {}, queue-size {}", queueCapacity, readIndex, writeIndex, getQueueSize());
     }
 
