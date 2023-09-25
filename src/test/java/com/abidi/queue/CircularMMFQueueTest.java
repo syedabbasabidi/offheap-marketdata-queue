@@ -1,6 +1,7 @@
 package com.abidi.queue;
 
 import com.abidi.marketdata.model.MarketData;
+import com.abidi.marketdata.model.MarketDataCons;
 import com.abidi.util.ByteUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,12 +30,26 @@ public class CircularMMFQueueTest {
     public void setup() throws IOException {
         byteUtils = new ByteUtils();
         MarketData md = new MarketData(byteUtils);
+        MarketDataCons md = new MarketData(byteUtils);
         queue = getInstance(md.size(), SIZE, "/tmp");
     }
 
     @AfterEach
     public void destroy() {
         queue.cleanup();
+    }
+
+    @Test
+    @DisplayName("Add one msg and consume it")
+    public void test1() {
+
+        MarketData md = getMarketData();
+        md.setPrice(103.12);
+        md.setId(1123);
+        queue.add(md.getData());
+        assertEquals(1, queue.getQueueSize());
+        MarketDataCons = queue.get();
+        assertEquals(queue.getQueueSize(), 0);
     }
 
     @Test
