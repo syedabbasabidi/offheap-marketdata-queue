@@ -198,8 +198,12 @@ public class CircularMMFQueue {
         return writerContextBuffer.getLong(0);
     }
 
-    public static CircularMMFQueue getInstance(int objSize, String path) throws IOException {
-        return new CircularMMFQueue(objSize, DEFAULT_SIZE, path);
+    public static CircularMMFQueue getInstance(int msgSize, String path) throws IOException {
+        return new CircularMMFQueue(msgSize, DEFAULT_SIZE, path);
+    }
+
+    public static CircularMMFQueue getInstance(int msgSize, int queueSize, String path) throws IOException {
+        return new CircularMMFQueue(msgSize, queueSize, path);
     }
 
     public long getQueueSize() {

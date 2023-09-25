@@ -2,18 +2,26 @@ package com.abidi.queue;
 
 import com.abidi.marketdata.model.MarketData;
 import com.abidi.util.ByteUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
+import static com.abidi.queue.CircularMMFQueue.getInstance;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static com.abidi.queue.CircularMMFQueue.getInstance;
 
-public class CircularMMFQueueTest { 
+public class CircularMMFQueueTest {
 
     public static final int SIZE = 10;
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd:HH:mm:ss");
+    public static final String BRC = "BRC";
+    public static final int SIDE = 1;
+    public static final String SEC_ID = "GB00BJLR0J16";
     private CircularMMFQueue queue;
     private ByteUtils byteUtils;
 
@@ -21,30 +29,36 @@ public class CircularMMFQueueTest {
     public void setup() throws IOException {
         byteUtils = new ByteUtils();
         MarketData md = new MarketData(byteUtils);
-        queue = getInstance(md.size(), "/tmp");
+        queue = getInstance(md.size(), SIZE, "/tmp");
+    }
+
+    @AfterEach
+    public void destroy() {
         queue.cleanup();
     }
 
     @Test
+    @DisplayName("Create a queue with size less than integer size, this should fit in exactly one MMF buffer. " +
+            "Add a few messages, consumer them and ensure queue size is zero")
     public void checkQueueSize() {
 
-        MarketData md = new MarketData(byteUtils);
-        md.set("GB00BJLR0J16", 0d, 1, true, (byte) 1, "BRC", "2023-01-14:22:10:13", 0);
-        rangeClosed(1, SIZE).forEach(j -> {
+        MarketData md = getMarketData();
+        rangeClosed(1, SIZE / 2).forEach(j -> {
             md.setPrice(j);
             md.setId(j);
             queue.add(md.getData());
         });
-        assertEquals(queue.getQueueSize(), SIZE);
-        rangeClosed(1, SIZE).forEach(j -> queue.get());
+        assertEquals(queue.getQueueSize(), SIZE / 2);
+        rangeClosed(1, SIZE / 2).forEach(j -> queue.get());
         assertEquals(queue.getQueueSize(), 0);
     }
 
     @Test
+    @DisplayName("Create a queue with size less than integer size, this should fit in exactly one MMF buffer. " +
+            "Add messages more than the queue size")
     public void checkQueueSizeAfterConsumerHasReadHalfOfTheQueue() {
 
-        MarketData md = new MarketData(byteUtils);
-        md.set("GB00BJLR0J16", 0d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", 0);
+        MarketData md = getMarketData();
         rangeClosed(1, SIZE).forEach(j -> {
             md.setPrice(j);
             md.setId(j);
@@ -61,5 +75,12 @@ public class CircularMMFQueueTest {
 
         assertEquals(queue.getQueueSize(), SIZE + 5);
 
+    }
+
+
+    private MarketData getMarketData() {
+        MarketData md = new MarketData(byteUtils);
+        md.set(SEC_ID, 0d, SIDE, true, (byte) 1, BRC, DATE_TIME_FORMATTER.format(LocalDateTime.now()), 0);
+        return md;
     }
 }
