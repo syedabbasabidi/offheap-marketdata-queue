@@ -25,12 +25,13 @@ public class CircularMMFQueueTest {
     public static final String SEC_ID = "GB00BJLR0J16";
     private CircularMMFQueue queue;
     private ByteUtils byteUtils;
+    private MarketDataCons mdConsumer;
 
     @BeforeEach
     public void setup() throws IOException {
         byteUtils = new ByteUtils();
         MarketData md = new MarketData(byteUtils);
-        MarketDataCons md = new MarketData(byteUtils);
+        mdConsumer = new MarketDataCons(byteUtils);
         queue = getInstance(md.size(), SIZE, "/tmp");
     }
 
@@ -48,7 +49,8 @@ public class CircularMMFQueueTest {
         md.setId(1123);
         queue.add(md.getData());
         assertEquals(1, queue.getQueueSize());
-        MarketDataCons = queue.get();
+        mdConsumer.setData(queue.get());
+        assertEquals(String.valueOf(mdConsumer.getSec()), SEC_ID);
         assertEquals(queue.getQueueSize(), 0);
     }
 
