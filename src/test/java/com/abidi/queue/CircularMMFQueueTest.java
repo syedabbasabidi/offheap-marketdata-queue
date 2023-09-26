@@ -41,6 +41,14 @@ public class CircularMMFQueueTest {
     }
 
     @Test
+    @DisplayName("Queue created, ensure there are no messages in it")
+    public void test0() {
+        assertEquals(0, queue.getQueueSize());
+        assertEquals(0, queue.messagesWritten());
+        assertEquals(0, queue.messagesRead());
+    }
+
+    @Test
     @DisplayName("Add one msg and consume it")
     public void test1() {
 
@@ -51,7 +59,7 @@ public class CircularMMFQueueTest {
         assertEquals(1, queue.getQueueSize());
         mdConsumer.setData(queue.get());
         assertEquals(String.valueOf(mdConsumer.getSec()), SEC_ID);
-        assertEquals(queue.getQueueSize(), 0);
+        assertEquals(0, queue.getQueueSize());
     }
 
     @Test
@@ -96,6 +104,28 @@ public class CircularMMFQueueTest {
         });
 
         assertEquals(queue.getQueueSize(), SIZE);
+    }
+
+    @Test
+    @DisplayName("Add one msg, close queue, and consume it")
+    public void test4() throws IOException {
+
+        MarketData md = getMarketData();
+        md.setPrice(103.12);
+        md.setId(1123);
+        queue.add(md.getData());
+        assertEquals(1, queue.messagesWritten());
+        assertEquals(0, queue.messagesRead());
+
+        queue.closeQueue();
+        queue = getInstance(md.size(), SIZE, "/tmp");
+
+        assertEquals(1, queue.getQueueSize());
+        mdConsumer.setData(queue.get());
+        assertEquals(String.valueOf(mdConsumer.getSec()), SEC_ID);
+        assertEquals(0, queue.getQueueSize());
+        assertEquals(1, queue.messagesWritten());
+        assertEquals(1, queue.messagesRead());
     }
 
     private MarketData getMarketData() {

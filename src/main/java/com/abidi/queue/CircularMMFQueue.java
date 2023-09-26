@@ -233,17 +233,23 @@ public class CircularMMFQueue {
 
     public void cleanup() {
         try {
-            queueChannel.close();
-            queueReaderContextChannel.close();
-            queueWriterContextChannel.close();
-
-            queue.close();
-            queueWriterContext.close();
-            queueReaderContext.close();
-
+            closeQueue();
             delete(Path.of(queuePath));
             delete(Path.of(queueReaderContextPath));
             delete(Path.of(queueWriterContextPath));
+        } catch (IOException e) {
+            LOG.error("Failed to delete underlying files", e);
+        }
+    }
+
+    public void closeQueue() {
+        try {
+            queueChannel.close();
+            queueReaderContextChannel.close();
+            queueWriterContextChannel.close();
+            queue.close();
+            queueWriterContext.close();
+            queueReaderContext.close();
         } catch (IOException e) {
             LOG.error("Failed to close underlying file", e);
         }
