@@ -55,8 +55,7 @@ public class CircularMMFQueueTest {
     }
 
     @Test
-    @DisplayName("Create a queue with size less than integer size, this should fit in exactly one MMF buffer. " +
-            "Add a few messages, consumer them and ensure queue size is zero")
+    @DisplayName("Producer fills queue with half the size of queue and consumer consumes it")
     public void test2() {
 
         MarketData md = getMarketData();
@@ -68,6 +67,9 @@ public class CircularMMFQueueTest {
         assertEquals(queue.getQueueSize(), SIZE / 2);
         rangeClosed(1, SIZE / 2).forEach(j -> queue.get());
         assertEquals(queue.getQueueSize(), 0);
+        assertEquals(SIZE / 2, queue.messagesWritten());
+        assertEquals(SIZE / 2, queue.messagesRead());
+
     }
 
     @Test
@@ -94,9 +96,7 @@ public class CircularMMFQueueTest {
         });
 
         assertEquals(queue.getQueueSize(), SIZE);
-
     }
-
 
     private MarketData getMarketData() {
         MarketData md = new MarketData(byteUtils);
