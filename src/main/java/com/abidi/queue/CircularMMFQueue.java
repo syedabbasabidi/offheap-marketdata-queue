@@ -76,7 +76,7 @@ public class CircularMMFQueue {
 
         if (isReaderIndexHeadOfWriter()) return null;
 
-        if (hasAnIndexAwaitingAck()) return null;
+        if (isAMsgAwaitingAck()) return null;
 
         if (isEmpty()) {
             LOG.debug("Queue is empty");
@@ -123,7 +123,7 @@ public class CircularMMFQueue {
 
         if (isReaderIndexHeadOfWriter()) return null;
 
-        if (hasAnIndexAwaitingAck()) return null;
+        if (isAMsgAwaitingAck()) return null;
 
         if (isEmpty()) {
             LOG.debug("Queue is empty");
@@ -137,7 +137,7 @@ public class CircularMMFQueue {
         return lastDequedMsg;
     }
 
-    private boolean hasAnIndexAwaitingAck() {
+    private boolean isAMsgAwaitingAck() {
         if (indexToAck != -1) {
             LOG.info("Index {} hasn't been acked yet", indexToAck);
             return true;

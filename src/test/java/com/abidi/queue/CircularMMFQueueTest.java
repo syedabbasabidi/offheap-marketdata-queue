@@ -14,7 +14,7 @@ import java.time.format.DateTimeFormatter;
 
 import static com.abidi.queue.CircularMMFQueue.getInstance;
 import static java.util.stream.IntStream.rangeClosed;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class CircularMMFQueueTest {
 
@@ -46,12 +46,14 @@ public class CircularMMFQueueTest {
         assertEquals(0, queue.getQueueSize());
         assertEquals(0, queue.messagesWritten());
         assertEquals(0, queue.messagesRead());
+        assertTrue(queue.isEmpty());
+        assertFalse(queue.isFull());
     }
 
 
     @Test
     @DisplayName("Add one msg, close down the queue, open it for consumption and consume the persisted msg")
-    public void test4() throws IOException {
+    public void test1() throws IOException {
 
         MarketData md = getMarketData();
         md.setPrice(103.12);
@@ -59,6 +61,8 @@ public class CircularMMFQueueTest {
         queue.add(md.getData());
         assertEquals(1, queue.messagesWritten());
         assertEquals(0, queue.messagesRead());
+        assertFalse(queue.isEmpty());
+        assertFalse(queue.isFull());
 
         queue.closeQueue();
         queue = getInstance(md.size(), SIZE, "/tmp");
@@ -69,25 +73,31 @@ public class CircularMMFQueueTest {
         assertEquals(0, queue.getQueueSize());
         assertEquals(1, queue.messagesWritten());
         assertEquals(1, queue.messagesRead());
+        assertTrue(queue.isEmpty());
+        assertFalse(queue.isFull());
     }
 
     @Test
     @DisplayName("Add one msg and consume it")
-    public void test1() {
+    public void test2() {
 
         MarketData md = getMarketData();
         md.setPrice(103.12);
         md.setId(1123);
         queue.add(md.getData());
+        assertFalse(queue.isEmpty());
+        assertFalse(queue.isFull());
         assertEquals(1, queue.getQueueSize());
         mdConsumer.setData(queue.get());
         assertEquals(String.valueOf(mdConsumer.getSec()), SEC_ID);
         assertEquals(0, queue.getQueueSize());
+        assertTrue(queue.isEmpty());
+        assertFalse(queue.isFull());
     }
 
     @Test
     @DisplayName("Producer fills queue with half the size of queue and consumer consumes it")
-    public void test2() {
+    public void test3() {
 
         MarketData md = getMarketData();
         rangeClosed(1, SIZE / 2).forEach(j -> {
@@ -95,17 +105,20 @@ public class CircularMMFQueueTest {
             md.setId(j);
             queue.add(md.getData());
         });
+        assertFalse(queue.isEmpty());
+        assertFalse(queue.isFull());
         assertEquals(queue.getQueueSize(), SIZE / 2);
         rangeClosed(1, SIZE / 2).forEach(j -> queue.get());
         assertEquals(queue.getQueueSize(), 0);
         assertEquals(SIZE / 2, queue.messagesWritten());
         assertEquals(SIZE / 2, queue.messagesRead());
-
+        assertTrue(queue.isEmpty());
+        assertFalse(queue.isFull());
     }
 
     @Test
     @DisplayName("Producer fills the queue after consumers consumes all")
-    public void test3() {
+    public void test4() {
 
         MarketData md = getMarketData();
         rangeClosed(1, SIZE).forEach(j -> {
@@ -114,12 +127,16 @@ public class CircularMMFQueueTest {
             queue.add(md.getData());
         });
         assertEquals(queue.getQueueSize(), SIZE);
+        assertFalse(queue.isEmpty());
+        assertTrue(queue.isFull());
 
         rangeClosed(1, SIZE).forEach(j -> queue.get());
 
         assertEquals(queue.getQueueSize(), 0);
         assertEquals(SIZE, queue.messagesWritten());
         assertEquals(SIZE, queue.messagesRead());
+        assertTrue(queue.isEmpty());
+        assertFalse(queue.isFull());
 
         rangeClosed(1, SIZE).forEach(j -> {
             md.setPrice(j);
@@ -127,6 +144,8 @@ public class CircularMMFQueueTest {
         });
 
         assertEquals(queue.getQueueSize(), SIZE);
+        assertFalse(queue.isEmpty());
+        assertTrue(queue.isFull());
     }
 
     private MarketData getMarketData() {
