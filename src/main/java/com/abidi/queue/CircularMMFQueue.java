@@ -72,14 +72,13 @@ public class CircularMMFQueue {
         LOG.info("Queue is setup with size {}, reader is at {}, writer is at {}, queue-size {}", queueCapacity, readIndex, writeIndex, getQueueSize());
     }
 
-
     public byte[] get() {
 
         if (isReaderIndexHeadOfWriter()) return null;
 
         if (hasAnIndexAwaitingAck()) return null;
 
-        if (!hasNext()) {
+        if (isEmpty()) {
             LOG.debug("Queue is empty");
             return null;
         }
@@ -95,7 +94,7 @@ public class CircularMMFQueue {
 
         if (isReaderIndexHeadOfWriter()) return false;
 
-        if ((writeIndex - currentReaderIndex()) >= (queueCapacity)) {
+        if (isFull()) {
             LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
             return false;
         }
@@ -108,9 +107,13 @@ public class CircularMMFQueue {
         return true;
     }
 
+    public boolean isFull() {
+        return (writeIndex - currentReaderIndex()) >= (queueCapacity);
+    }
+
     private boolean isReaderIndexHeadOfWriter() {
         if (currentReaderIndex() > currentWriterIndex()) {
-            LOG.error("Queue is invalid state, reader has read more messages than written");
+            LOG.error("Queue is invalid state, reader seems to have read more messages than written");
             return true;
         }
         return false;
@@ -122,7 +125,7 @@ public class CircularMMFQueue {
 
         if (hasAnIndexAwaitingAck()) return null;
 
-        if (!hasNext()) {
+        if (isEmpty()) {
             LOG.debug("Queue is empty");
             return null;
         }
@@ -190,8 +193,8 @@ public class CircularMMFQueue {
         readerContextBuffer.putLong(0, readIndex + 1);
     }
 
-    private boolean hasNext() {
-        return readIndex < currentWriterIndex();
+    public boolean isEmpty() {
+        return readIndex >= currentWriterIndex();
     }
 
     private long currentWriterIndex() {
