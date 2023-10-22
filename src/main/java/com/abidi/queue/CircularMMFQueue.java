@@ -3,6 +3,7 @@ package com.abidi.queue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
@@ -44,16 +45,18 @@ public class CircularMMFQueue {
         this.msgLength = msgSize;
         this.queueCapacity = queueCapacity;
 
+        createDirectoryStructureIfDoesntExist(path);
+
         queuePath = path + "/" + NAME + ".txt";
         queueReaderContextPath = path + "/" + NAME + "-reader-context.txt";
         queueWriterContextPath = path + "/" + NAME + "-writer-context.txt";
+        queue = new RandomAccessFile(queuePath, "rw");
+        queueWriterContext = new RandomAccessFile(queueWriterContextPath, "rw");
+        queueReaderContext = new RandomAccessFile(queueReaderContextPath, "rw");
 
         long totalBytesRequiredToAccommodateCapacity = (long) msgSize * queueCapacity;
         int numberOfBuffers = (int) Math.ceil((double) totalBytesRequiredToAccommodateCapacity / (double) Integer.MAX_VALUE);
         queueBuffers = new MappedByteBuffer[numberOfBuffers];
-        queue = new RandomAccessFile(queuePath, "rw");
-        queueWriterContext = new RandomAccessFile(queueWriterContextPath, "rw");
-        queueReaderContext = new RandomAccessFile(queueReaderContextPath, "rw");
         queueWriterContextChannel = queueWriterContext.getChannel();
         writerContextBuffer = queueWriterContextChannel.map(READ_WRITE, 0, 8);
         queueReaderContextChannel = queueReaderContext.getChannel();
@@ -70,6 +73,13 @@ public class CircularMMFQueue {
         numberOfMessagesPerBuffer = Integer.MAX_VALUE / msgSize;
 
         LOG.info("Queue is setup with size {}, reader is at {}, writer is at {}, queue-size {}", queueCapacity, readIndex, writeIndex, getQueueSize());
+    }
+
+    private static void createDirectoryStructureIfDoesntExist(String path) throws IOException {
+        File dir = new File(path);
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new IOException(String.format("Failed to create directory structure %s", path));
+        }
     }
 
     public byte[] get() {
