@@ -54,32 +54,19 @@ public class CircularMMFQueue {
         queueWriterContext = new RandomAccessFile(queueWriterContextPath, "rw");
         queueReaderContext = new RandomAccessFile(queueReaderContextPath, "rw");
 
-        long totalBytesRequiredToAccommodateCapacity = (long) msgSize * queueCapacity;
-        int numberOfBuffers = (int) Math.ceil((double) totalBytesRequiredToAccommodateCapacity / (double) Integer.MAX_VALUE);
-        queueBuffers = new MappedByteBuffer[numberOfBuffers];
         queueWriterContextChannel = queueWriterContext.getChannel();
-        writerContextBuffer = queueWriterContextChannel.map(READ_WRITE, 0, 8);
         queueReaderContextChannel = queueReaderContext.getChannel();
+        writerContextBuffer = queueWriterContextChannel.map(READ_WRITE, 0, 8);
         readerContextBuffer = queueReaderContextChannel.map(READ_WRITE, 0, 8);
+        queueChannel = queue.getChannel();
         writeIndex = currentWriterIndex();
         readIndex = currentReaderIndex();
-        queueChannel = queue.getChannel();
 
-        for (int i = 0; i < numberOfBuffers; i++) {
-            queueBuffers[i] = queueChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
-        }
-
+        queueBuffers = initializedBuffers(msgSize, queueCapacity);
         lastDequedMsg = new byte[msgSize];
         numberOfMessagesPerBuffer = Integer.MAX_VALUE / msgSize;
 
         LOG.info("Queue is setup with size {}, reader is at {}, writer is at {}, queue-size {}", queueCapacity, readIndex, writeIndex, getQueueSize());
-    }
-
-    private static void createDirectoryStructureIfDoesntExist(String path) throws IOException {
-        File dir = new File(path);
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new IOException(String.format("Failed to create directory structure %s", path));
-        }
     }
 
     public byte[] get() {
@@ -229,6 +216,24 @@ public class CircularMMFQueue {
 
     public long messagesRead() {
         return currentReaderIndex();
+    }
+
+    private MappedByteBuffer[] initializedBuffers(long msgSize, int queueCapacity) throws IOException {
+        final MappedByteBuffer[] queueBuffers;
+        long totalBytesRequiredToAccommodateCapacity = msgSize * queueCapacity;
+        int numberOfBuffers = (int) Math.ceil((double) totalBytesRequiredToAccommodateCapacity / (double) Integer.MAX_VALUE);
+        queueBuffers = new MappedByteBuffer[numberOfBuffers];
+        for (int i = 0; i < numberOfBuffers; i++) {
+            queueBuffers[i] = queueChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
+        }
+        return queueBuffers;
+    }
+
+    private static void createDirectoryStructureIfDoesntExist(String path) throws IOException {
+        File dir = new File(path);
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new IOException(String.format("Failed to create directory structure %s", path));
+        }
     }
 
     public void reset() {
