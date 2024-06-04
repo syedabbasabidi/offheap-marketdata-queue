@@ -8,18 +8,16 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static com.abidi.queue.CircularMMFQueue.getInstance;
-
 public class CircularQueueProducer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CircularQueueProducer.class);
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
 
         LOG.info("Starting producer...");
         MarketData md = new MarketData(new ByteUtils());
-        CircularMMFQueue mmfQueue = getInstance(md.size(), "/tmp");
-        mmfQueue.reset();
+        CircularMMFQueue mmfQueue = getInstance(md);
+        //mmfQueue.reset();
 
         int j = 0;
         md.set("GB00BJLR0J16", 1d + j, 0, true, (byte) 1, "BRC", "2023-02-14:22:10:13", j);
@@ -29,7 +27,6 @@ public class CircularQueueProducer {
             md.setFirm(j % 2 == 0);
             md.setId(j);
             j = mmfQueue.add(md.getData()) ? j + 1 : j;
-            // if (j > 0 && j % BATCH_SIZE == 0) pause(mmfQueue, (j / BATCH_SIZE));
 
         }
     }
@@ -45,5 +42,14 @@ public class CircularQueueProducer {
 
     private static String toMB(long init) {
         return (Long.valueOf(init).doubleValue() / (1024 * 1024)) + " MB";
+    }
+
+    private static CircularMMFQueue getInstance(MarketData marketData) {
+        try {
+            return CircularMMFQueue.getInstance(marketData.size(), "/tmp");
+        } catch (IOException e) {
+            LOG.error("Failed to set up queue", e);
+            return null;
+        }
     }
 }
