@@ -76,7 +76,7 @@ public class CircularMMFQueue {
         if (isAMsgAwaitingAck()) return null;
 
         if (isEmpty()) {
-            LOG.debug("Queue is empty");
+         //   LOG.debug("Queue is empty");
             return null;
         }
         int index = readFromIndex();
@@ -92,7 +92,7 @@ public class CircularMMFQueue {
         if (isReaderIndexHeadOfWriter()) return false;
 
         if (isFull()) {
-            LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
+            //LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
             return false;
         }
 

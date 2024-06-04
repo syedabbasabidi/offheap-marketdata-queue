@@ -13,14 +13,14 @@ public class CircularQueueConsumer implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CircularQueueConsumer.class);
     private final ByteUtils byteUtils;
 
-    public CircularQueueConsumer() {
-        byteUtils = new ByteUtils();
+    public CircularQueueConsumer(ByteUtils byteUtils) {
+        this.byteUtils = byteUtils;
     }
 
     public static void main(String[] args) {
 
         LOG.info("Starting consumer ...");
-        CircularQueueConsumer circularQueueConsumer = new CircularQueueConsumer();
+        CircularQueueConsumer circularQueueConsumer = new CircularQueueConsumer(new ByteUtils());
         circularQueueConsumer.run();
     }
 
@@ -28,7 +28,7 @@ public class CircularQueueConsumer implements Runnable {
 
         MarketDataCons marketData = new MarketDataCons(byteUtils);
         CircularMMFQueue mmfQueue = getInstance(marketData);
-        LOG.info("Reading to consume");
+        LOG.info("Consumer started...");
         while (true) {
             byte[] bytes = mmfQueue.get();
             if (bytes != null) {
