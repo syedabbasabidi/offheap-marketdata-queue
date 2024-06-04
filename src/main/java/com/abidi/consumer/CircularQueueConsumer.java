@@ -28,6 +28,11 @@ public class CircularQueueConsumer implements Runnable {
 
         MarketDataCons marketData = new MarketDataCons(byteUtils);
         CircularMMFQueue mmfQueue = getInstance(marketData);
+
+        if (mmfQueue == null) {
+            throw new RuntimeException("Failed to get instance of CircularMMFQueue");
+        }
+
         LOG.info("Consumer started...");
         while (true) {
             byte[] bytes = mmfQueue.get();
