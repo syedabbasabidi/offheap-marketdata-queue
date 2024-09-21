@@ -18,7 +18,7 @@ public class MarketData {
     public static final int QUOTING_BROKER_STRAT_INDEX = 41;
     public static final int PRICE_TYPE_START_INDEX = 44;
     public static final int QUOTE_ID_START_INDEX = 45;
-    private volatile byte[] data;
+    private final byte[] data;
 
     private final ByteBuffer securityMapper = allocateDirect(12);
     private final ByteBuffer brokerMapper = allocateDirect(3);

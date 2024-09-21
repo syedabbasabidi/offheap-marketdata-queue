@@ -58,7 +58,9 @@ public class CircularMMFQueueTest {
         MarketData md = getMarketData();
         md.setPrice(103.12);
         md.setId(1123);
+
         queue.add(md.getData());
+
         assertEquals(1, queue.messagesWritten());
         assertEquals(0, queue.messagesRead());
         assertFalse(queue.isEmpty());
@@ -69,6 +71,7 @@ public class CircularMMFQueueTest {
 
         assertEquals(1, queue.getQueueSize());
         mdConsumer.setData(queue.get());
+
         assertEquals(String.valueOf(mdConsumer.getSec()), SEC_ID);
         assertEquals(0, queue.getQueueSize());
         assertEquals(1, queue.messagesWritten());

@@ -9,14 +9,14 @@ public class MarketDataCons {
 
     private static final int OBJ_SIZE = 49;
     private final ByteUtils byteUtils;
-    private volatile byte[] data;
+    private final byte[] data;
     private boolean isFirm;
     private int side;
-    private char sec[] = new char[12];
+    private final char[] sec = new char[12];
     private double price;
-    private char broker[] = new char[3];
+    private final char[] broker = new char[3];
     private int priceType;
-    private char[] validUntil = new char[19];
+    private final char[] validUntil = new char[19];
 
     private int id;
 
