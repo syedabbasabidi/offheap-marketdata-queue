@@ -4,6 +4,7 @@ import com.abidi.util.ByteArrayUtil;
 import com.abidi.util.ByteUtils;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import static java.nio.ByteBuffer.allocateDirect;
 import static java.util.stream.IntStream.range;
@@ -11,6 +12,10 @@ import static java.util.stream.IntStream.range;
 public class MarketData {
 
     private static final int OBJ_SIZE = 49;
+    public static final int SECURITY_START_INDEX = 2;
+    public static final int SECURITY_END_INDEX = 14;
+    public static final int FIRM_QUOTE_INDICATOR_INDEX = 0;
+    public static final int SIDE_INDICATOR_INDEX = 1;
     private volatile byte[] data;
 
     private final ByteBuffer securityMapper = allocateDirect(12);
@@ -30,17 +35,20 @@ public class MarketData {
     }
 
     public void setFirm(boolean isFirm) {
-        data[0] = (byte) (isFirm ? 1 : 0);
+        data[FIRM_QUOTE_INDICATOR_INDEX] = (byte) (isFirm ? 1 : 0);
     }
 
     public void side(int buy) {
-        data[1] = (byte) buy;
+        data[SIDE_INDICATOR_INDEX] = (byte) buy;
     }
 
     public void setSecurity(String id) {
+        //dump security in sec buffer
         range(0, id.length()).map(id::charAt).forEach(b -> securityMapper.put((byte) b));
+        //Make sec buffer readable
         securityMapper.flip();
-        range(2, 14).forEach(i -> data[i] = securityMapper.get());
+        //dump security in object buffer
+        range(SECURITY_START_INDEX, SECURITY_END_INDEX).forEach(i -> data[i] = securityMapper.get());
     }
 
     public void setPrice(double price) {
