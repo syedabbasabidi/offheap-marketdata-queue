@@ -3,6 +3,7 @@ package com.abidi.producer;
 import com.abidi.marketdata.model.MarketData;
 import com.abidi.queue.CircularMMFQueue;
 import com.abidi.util.ByteUtils;
+import com.abidi.util.Latin1StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,20 +17,21 @@ public class CircularQueueProducer {
 
         LOG.info("Starting producer...");
         MarketData md = new MarketData(new ByteUtils());
+        Latin1StringUtil latin1Util = new Latin1StringUtil();
         CircularMMFQueue mmfQueue = getInstance(md);
-        //mmfQueue.reset();
 
         int j = 0;
-        md.set("GB00BJLR0J16", 1d + j, 0, true, (byte) 1, "BRC", "2023-02-14:22:10:13", j);
+        String gb00BJLR0J16 = latin1Util.getGb00BJLR0J16InLatin1();
+        md.set(gb00BJLR0J16, 1d + j, 0, true, (byte) 1, "BRC", "2023-02-14:22:10:13", j);
         while (true) {
             md.setPrice(1d + j);
             md.side(j % 2 == 0 ? 0 : 1);
             md.setFirm(j % 2 == 0);
             md.setId(j);
             j = mmfQueue.add(md.getData()) ? j + 1 : j;
-
         }
     }
+
 
     private static void pause(CircularMMFQueue mmfQueue, int batchNumber) {
         try {

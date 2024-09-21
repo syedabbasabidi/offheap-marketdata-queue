@@ -1,10 +1,8 @@
 package com.abidi.marketdata.model;
 
-import com.abidi.util.ByteArrayUtil;
 import com.abidi.util.ByteUtils;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 import static java.nio.ByteBuffer.allocateDirect;
 import static java.util.stream.IntStream.range;
@@ -13,9 +11,13 @@ public class MarketData {
 
     private static final int OBJ_SIZE = 49;
     public static final int SECURITY_START_INDEX = 2;
-    public static final int SECURITY_END_INDEX = 14;
     public static final int FIRM_QUOTE_INDICATOR_INDEX = 0;
     public static final int SIDE_INDICATOR_INDEX = 1;
+    public static final int PRICE_START_INDEX = 14;
+    public static final int QUOTE_EXPIRY_START_INDEX = 22;
+    public static final int QUOTING_BROKER_STRAT_INDEX = 41;
+    public static final int PRICE_TYPE_START_INDEX = 44;
+    public static final int QUOTE_ID_START_INDEX = 45;
     private volatile byte[] data;
 
     private final ByteBuffer securityMapper = allocateDirect(12);
@@ -24,14 +26,9 @@ public class MarketData {
 
     private final ByteUtils byteUtils;
 
-    public MarketData(ByteUtils byteUtils)
-    {
+    public MarketData(ByteUtils byteUtils) {
         data = new byte[OBJ_SIZE];
         this.byteUtils = byteUtils;
-    }
-
-    public void setData(byte[] data) {
-        ByteArrayUtil.copy(data, this.data);
     }
 
     public void setFirm(boolean isFirm) {
@@ -48,14 +45,14 @@ public class MarketData {
         //Make sec buffer readable
         securityMapper.flip();
         //dump security in object buffer
-        range(SECURITY_START_INDEX, SECURITY_END_INDEX).forEach(i -> data[i] = securityMapper.get());
+        range(SECURITY_START_INDEX, PRICE_START_INDEX).forEach(i -> data[i] = securityMapper.get());
     }
 
     public void setPrice(double price) {
 
         byte[] bytes = byteUtils.longToBytes((long) (price * 1000));
 
-        for (int i = 0, j = 14; i < bytes.length; i++, j++) {
+        for (int i = 0, j = PRICE_START_INDEX; i < bytes.length; i++, j++) {
             data[j] = bytes[i];
         }
     }
@@ -64,7 +61,7 @@ public class MarketData {
 
         range(0, expiresAt.length()).map(expiresAt::charAt).forEach(b -> dateMapper.put((byte) b));
         dateMapper.flip();
-        for (int i = 0, j = 22; i < 19; i++, j++) {
+        for (int i = 0, j = QUOTE_EXPIRY_START_INDEX; i < 19; i++, j++) {
             data[j] = dateMapper.get();
         }
     }
@@ -73,18 +70,18 @@ public class MarketData {
 
         range(0, broker.length()).map(broker::charAt).forEach(b -> brokerMapper.put((byte) b));
         brokerMapper.flip();
-        for (int i = 0, j = 41; i < 3; i++, j++) {
+        for (int i = 0, j = QUOTING_BROKER_STRAT_INDEX; i < 3; i++, j++) {
             data[j] = brokerMapper.get();
         }
     }
 
     public void setPriceType(byte priceType) {
-        data[44] = priceType;
+        data[PRICE_TYPE_START_INDEX] = priceType;
     }
 
     public void setId(int id) {
         byte[] bytes = byteUtils.intToBytes(id);
-        for (int i = 0, j = 45; i < bytes.length; i++, j++) {
+        for (int i = 0, j = QUOTE_ID_START_INDEX; i < bytes.length; i++, j++) {
             data[j] = bytes[i];
         }
     }
