@@ -93,7 +93,7 @@ public class CircularMMFQueue {
         if (isReaderIndexHeadOfWriter()) return false;
 
         if (isFull()) {
-            //LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
+            LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
             return false;
         }
 
