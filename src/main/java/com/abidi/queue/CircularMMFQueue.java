@@ -15,6 +15,7 @@ import static java.nio.file.Files.delete;
 import static java.util.Arrays.stream;
 
 public class CircularMMFQueue {
+
     public static final int DEFAULT_SIZE = 100_000;
     private static final String NAME = "OFF_HEAP_QUEUE";
 
@@ -28,8 +29,8 @@ public class CircularMMFQueue {
     private final MappedByteBuffer readerContextBuffer;
     private final FileChannel queueChannel;
     private final FileChannel queueWriterContextChannel;
-    private final int numberOfMessagesPerBuffer;
     private final FileChannel queueReaderContextChannel;
+    private final int numberOfMessagesPerBuffer;
     private volatile long writeIndex;
     private volatile long readIndex;
     private final byte[] lastDequedMsg;
@@ -83,11 +84,11 @@ public class CircularMMFQueue {
         MappedByteBuffer buffer = queueBuffers[getBufferIndex(index)];
         buffer.position(getIndexWithinBuffer(index));
         buffer.get(lastDequedMsg, 0, msgLength);
-        flushReaderIndex();
+        updateReaderContext();
         return lastDequedMsg;
     }
 
-    public boolean add(byte[] object) {
+    public boolean add(byte[] msg) {
 
         if (isReaderIndexHeadOfWriter()) return false;
 
@@ -98,9 +99,9 @@ public class CircularMMFQueue {
 
         MappedByteBuffer buffer = queueBuffers[getBufferIndex(writeAtIndex())];
         buffer.position(getIndexWithinBuffer(writeAtIndex()));
-        buffer.put(object, 0, object.length);
+        buffer.put(msg, 0, msg.length);
         updateWriterContext();
-
+        buffer.force();
         return true;
     }
 
@@ -144,7 +145,7 @@ public class CircularMMFQueue {
 
     public void ack() {
         if (indexToAck == readFromIndex()) {
-            flushReaderIndex();
+            updateReaderContext();
             indexToAck = -1;
         }
     }
@@ -172,9 +173,10 @@ public class CircularMMFQueue {
     }
 
 
-    private void flushReaderIndex() {
-        updateReaderContext();
+    private void updateReaderContext() {
+        readerContextBuffer.putLong(0, readIndex + 1);
         readIndex++; //flush store buffers
+        readerContextBuffer.force();
     }
 
     private long currentReaderIndex() {
@@ -184,10 +186,7 @@ public class CircularMMFQueue {
     private void updateWriterContext() {
         writerContextBuffer.putLong(0, writeIndex + 1);
         writeIndex++; // flush store buffers
-    }
-
-    private void updateReaderContext() {
-        readerContextBuffer.putLong(0, readIndex + 1);
+        writerContextBuffer.force();
     }
 
     public boolean isEmpty() {
