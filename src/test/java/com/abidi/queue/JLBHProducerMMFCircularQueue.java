@@ -19,11 +19,11 @@ public class JLBHProducerMMFCircularQueue implements JLBHTask {
     private JLBH jlbh;
     private CircularMMFQueue circularMMFQueue;
     private MarketData marketData;
-    private double price = 0;
 
     private Thread consumerThread;
 
     private static final Logger LOG = LoggerFactory.getLogger(JLBHProducerMMFCircularQueue.class);
+    private int missedAdd;
 
     public static void main(String[] args) {
 
@@ -43,23 +43,30 @@ public class JLBHProducerMMFCircularQueue implements JLBHTask {
         try {
             circularMMFQueue = getInstance(marketData.size(), "/tmp");
             circularMMFQueue.reset();
-            consumerThread = new Thread(new CircularQueueConsumer(new ByteUtils()));
-            consumerThread.start();
+            //consumerThread = new Thread(new CircularQueueConsumer(new ByteUtils()));
+            //consumerThread.start();
         } catch (IOException e) {
-            System.out.println(e);
+            LOG.error("Error initializing test", e);
         }
     }
 
     @Override
     public void run(long startTimeNS) {
-        circularMMFQueue.add(marketData.getData());
+        if(!circularMMFQueue.add(marketData.getData())) {
+            missedAdd++;
+        }
         jlbh.sampleNanos((nanoTime() - 10) - startTimeNS);
     }
 
     @Override
     public void complete() {
-        consumerThread.interrupt();
-        LOG.info("Number of messages writen {} and read {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead());
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        //consumerThread.interrupt();
+        LOG.info("Number of messages writen {} and read {}, missed writes {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead(), missedAdd);
     }
 
 }

@@ -20,9 +20,14 @@ public class CircularMMFQueueTest {
 
     public static final int SIZE = 10;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd:HH:mm:ss");
+    public static final String QUOTE_EXPIRY_DATE = DATE_TIME_FORMATTER.format(LocalDateTime.of(2024, 11, 5, 13, 22, 43));
     public static final String BRC = "BRC";
     public static final int SIDE = 1;
     public static final String SEC_ID = "GB00BJLR0J16";
+    public static final double PRICE = 103.12;
+    public static final int ID = 1122;
+    public static final boolean IS_FIRM = true;
+    public static final byte PRICE_TYPE =  1;
     private CircularMMFQueue queue;
     private ByteUtils byteUtils;
     private MarketDataCons mdConsumer;
@@ -56,9 +61,6 @@ public class CircularMMFQueueTest {
     public void test1() throws IOException {
 
         MarketData md = getMarketData();
-        md.setPrice(103.12);
-        md.setId(1123);
-
         queue.add(md.getData());
 
         assertEquals(1, queue.messagesWritten());
@@ -73,6 +75,14 @@ public class CircularMMFQueueTest {
         mdConsumer.setData(queue.get());
 
         assertEquals(String.valueOf(mdConsumer.getSec()), SEC_ID);
+        assertEquals(mdConsumer.getId(), ID);
+        assertEquals(mdConsumer.getPrice(), PRICE, 0.00000000001d);
+        assertEquals(String.valueOf(mdConsumer.getBroker()), BRC);
+        assertEquals(mdConsumer.getSide(), SIDE);
+        assertEquals(mdConsumer.getPriceType(), PRICE_TYPE);
+        assertEquals(String.valueOf(mdConsumer.getValidUntil()), QUOTE_EXPIRY_DATE);
+
+
         assertEquals(0, queue.getQueueSize());
         assertEquals(1, queue.messagesWritten());
         assertEquals(1, queue.messagesRead());
@@ -85,8 +95,6 @@ public class CircularMMFQueueTest {
     public void test2() {
 
         MarketData md = getMarketData();
-        md.setPrice(103.12);
-        md.setId(1123);
         queue.add(md.getData());
         assertFalse(queue.isEmpty());
         assertFalse(queue.isFull());
@@ -153,7 +161,7 @@ public class CircularMMFQueueTest {
 
     private MarketData getMarketData() {
         MarketData md = new MarketData(byteUtils);
-        md.set(SEC_ID, 0d, SIDE, true, (byte) 1, BRC, DATE_TIME_FORMATTER.format(LocalDateTime.now()), 0);
+        md.set(SEC_ID, PRICE, SIDE, IS_FIRM, PRICE_TYPE, BRC, QUOTE_EXPIRY_DATE, ID);
         return md;
     }
 }

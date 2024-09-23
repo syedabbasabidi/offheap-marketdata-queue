@@ -51,9 +51,9 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
                     circularMMFQueue.add(md.getData());
                 }
             });
-            producerThread.start();
+            //producerThread.start();
         } catch (IOException e) {
-            System.out.println(e);
+            LOG.error("Error initializing test", e);
         }
     }
 

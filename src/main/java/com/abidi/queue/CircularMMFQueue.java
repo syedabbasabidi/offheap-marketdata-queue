@@ -14,28 +14,31 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static java.nio.file.Files.delete;
 import static java.util.Arrays.stream;
 
+/**
+ * Off heap circular queue, relies on linux dirty cache page mechanism to persist MMF.
+ * Queue tested for single digit micro-second at 99.9 percentile.
+ * linux dirty page frequency tuning:  sysctl -w vm.dirty_writeback_centisecs=50
+ */
+
 public class CircularMMFQueue {
 
     public static final int DEFAULT_SIZE = 100_000;
     private static final String NAME = "OFF_HEAP_QUEUE";
+    public static final int TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT = 8;
 
     private final int msgLength;
     private final long queueCapacity;
     private final RandomAccessFile queue;
-    private final RandomAccessFile queueWriterContext;
     private final RandomAccessFile queueReaderContext;
     private final MappedByteBuffer[] queueBuffers;
-    private final MappedByteBuffer writerContextBuffer;
     private final MappedByteBuffer readerContextBuffer;
     private final FileChannel queueChannel;
-    private final FileChannel queueWriterContextChannel;
     private final FileChannel queueReaderContextChannel;
     private final int numberOfMessagesPerBuffer;
     private volatile long writeIndex;
     private volatile long readIndex;
     private final byte[] lastDequedMsg;
     private final String queuePath;
-    private final String queueWriterContextPath;
     private final String queueReaderContextPath;
 
     private static final Logger LOG = LoggerFactory.getLogger(CircularMMFQueue.class);
@@ -50,20 +53,16 @@ public class CircularMMFQueue {
 
         queuePath = path + "/" + NAME + ".txt";
         queueReaderContextPath = path + "/" + NAME + "-reader-context.txt";
-        queueWriterContextPath = path + "/" + NAME + "-writer-context.txt";
         queue = new RandomAccessFile(queuePath, "rw");
-        queueWriterContext = new RandomAccessFile(queueWriterContextPath, "rw");
         queueReaderContext = new RandomAccessFile(queueReaderContextPath, "rw");
 
-        queueWriterContextChannel = queueWriterContext.getChannel();
         queueReaderContextChannel = queueReaderContext.getChannel();
-        writerContextBuffer = queueWriterContextChannel.map(READ_WRITE, 0, 8);
         readerContextBuffer = queueReaderContextChannel.map(READ_WRITE, 0, 8);
         queueChannel = queue.getChannel();
+        queueBuffers = initializedBuffers(msgSize, queueCapacity);
         writeIndex = currentWriterIndex();
         readIndex = currentReaderIndex();
 
-        queueBuffers = initializedBuffers(msgSize, queueCapacity);
         lastDequedMsg = new byte[msgSize];
         numberOfMessagesPerBuffer = Integer.MAX_VALUE / msgSize;
 
@@ -77,12 +76,13 @@ public class CircularMMFQueue {
         if (isAMsgAwaitingAck()) return null;
 
         if (isEmpty()) {
-         //   LOG.debug("Queue is empty");
+            //   LOG.debug("Queue is empty");
             return null;
         }
         int index = readFromIndex();
-        MappedByteBuffer buffer = queueBuffers[getBufferIndex(index)];
-        buffer.position(getIndexWithinBuffer(index));
+        int bufferIndex = getBufferIndex(index);
+        MappedByteBuffer buffer = queueBuffers[bufferIndex];
+        buffer.position(getIndexWithinBuffer(index, bufferIndex));
         buffer.get(lastDequedMsg, 0, msgLength);
         updateReaderContext();
         return lastDequedMsg;
@@ -93,15 +93,15 @@ public class CircularMMFQueue {
         if (isReaderIndexHeadOfWriter()) return false;
 
         if (isFull()) {
-            LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
+            //   LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
             return false;
         }
 
-        MappedByteBuffer buffer = queueBuffers[getBufferIndex(writeAtIndex())];
-        buffer.position(getIndexWithinBuffer(writeAtIndex()));
+        int bufferIndex = getBufferIndex(writeAtIndex());
+        MappedByteBuffer buffer = queueBuffers[bufferIndex];
+        buffer.position(getIndexWithinBuffer(writeAtIndex(), bufferIndex));
         buffer.put(msg, 0, msg.length);
         updateWriterContext();
-        buffer.force();
         return true;
     }
 
@@ -129,8 +129,9 @@ public class CircularMMFQueue {
         }
         int index = readFromIndex();
         indexToAck = index;
-        MappedByteBuffer buffer = queueBuffers[getBufferIndex(index)];
-        buffer.position(getIndexWithinBuffer(index));
+        int bufferIndex = getBufferIndex(index);
+        MappedByteBuffer buffer = queueBuffers[bufferIndex];
+        buffer.position(getIndexWithinBuffer(index, bufferIndex));
         buffer.get(lastDequedMsg, 0, msgLength);
         return lastDequedMsg;
     }
@@ -168,15 +169,15 @@ public class CircularMMFQueue {
         return ret;
     }
 
-    private int getIndexWithinBuffer(int index) {
-        return (index % numberOfMessagesPerBuffer) * msgLength;
+    private int getIndexWithinBuffer(int index, int bufferIndex) {
+        int indexWithinBuffer = (index % numberOfMessagesPerBuffer) * msgLength;
+        return bufferIndex == 0 ? indexWithinBuffer + TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT : bufferIndex;
     }
 
 
     private void updateReaderContext() {
         readerContextBuffer.putLong(0, readIndex + 1);
         readIndex++; //flush store buffers
-        readerContextBuffer.force();
     }
 
     private long currentReaderIndex() {
@@ -184,9 +185,9 @@ public class CircularMMFQueue {
     }
 
     private void updateWriterContext() {
-        writerContextBuffer.putLong(0, writeIndex + 1);
+        MappedByteBuffer firstQueueBuffer = queueBuffers[0];
+        firstQueueBuffer.putLong(0, writeIndex + 1);
         writeIndex++; // flush store buffers
-        writerContextBuffer.force();
     }
 
     public boolean isEmpty() {
@@ -194,7 +195,7 @@ public class CircularMMFQueue {
     }
 
     private long currentWriterIndex() {
-        return writerContextBuffer.getLong(0);
+        return queueBuffers[0].getLong(0);
     }
 
     public static CircularMMFQueue getInstance(int msgSize, String path) throws IOException {
@@ -218,10 +219,11 @@ public class CircularMMFQueue {
     }
 
     private MappedByteBuffer[] initializedBuffers(long msgSize, int queueCapacity) throws IOException {
-        final MappedByteBuffer[] queueBuffers;
+
         long totalBytesRequiredToAccommodateCapacity = msgSize * queueCapacity;
+        totalBytesRequiredToAccommodateCapacity += TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT; //first X bytes reserved for writer's sequence
         int numberOfBuffers = (int) Math.ceil((double) totalBytesRequiredToAccommodateCapacity / (double) Integer.MAX_VALUE);
-        queueBuffers = new MappedByteBuffer[numberOfBuffers];
+        MappedByteBuffer[] queueBuffers = new MappedByteBuffer[numberOfBuffers];
         for (int i = 0; i < numberOfBuffers; i++) {
             queueBuffers[i] = queueChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
         }
@@ -238,14 +240,11 @@ public class CircularMMFQueue {
     public void reset() {
         stream(this.queueBuffers).forEach(MappedByteBuffer::clear);
         this.readerContextBuffer.putInt(0, 0);
-        this.writerContextBuffer.putInt(0, 0);
         this.readerContextBuffer.clear();
-        this.writerContextBuffer.clear();
         this.readIndex = 0;
         this.writeIndex = 0;
         readerContextBuffer.putLong(0, readIndex);
-        writerContextBuffer.putLong(0, writeIndex);
-
+        queueBuffers[0].putLong(0, writeIndex);
     }
 
     public void cleanup() {
@@ -253,7 +252,6 @@ public class CircularMMFQueue {
             closeQueue();
             delete(Path.of(queuePath));
             delete(Path.of(queueReaderContextPath));
-            delete(Path.of(queueWriterContextPath));
         } catch (IOException e) {
             LOG.error("Failed to delete underlying files", e);
         }
@@ -263,9 +261,7 @@ public class CircularMMFQueue {
         try {
             queueChannel.close();
             queueReaderContextChannel.close();
-            queueWriterContextChannel.close();
             queue.close();
-            queueWriterContext.close();
             queueReaderContext.close();
         } catch (IOException e) {
             LOG.error("Failed to close underlying file", e);
