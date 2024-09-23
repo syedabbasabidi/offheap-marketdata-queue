@@ -27,16 +27,15 @@ public class CircularMMFQueueTest {
     public static final double PRICE = 103.12;
     public static final int ID = 1122;
     public static final boolean IS_FIRM = true;
-    public static final byte PRICE_TYPE =  1;
+    public static final byte PRICE_TYPE = 1;
     private CircularMMFQueue queue;
     private ByteUtils byteUtils;
-    private MarketDataCons mdConsumer;
+
 
     @BeforeEach
     public void setup() throws IOException {
         byteUtils = new ByteUtils();
         MarketData md = new MarketData(byteUtils);
-        mdConsumer = new MarketDataCons(byteUtils);
         queue = getInstance(md.size(), SIZE, "/tmp");
     }
 
@@ -72,15 +71,10 @@ public class CircularMMFQueueTest {
         queue = getInstance(md.size(), SIZE, "/tmp");
 
         assertEquals(1, queue.getQueueSize());
+        MarketDataCons mdConsumer = new MarketDataCons(byteUtils);
         mdConsumer.setData(queue.get());
 
-        assertEquals(String.valueOf(mdConsumer.getSec()), SEC_ID);
-        assertEquals(mdConsumer.getId(), ID);
-        assertEquals(mdConsumer.getPrice(), PRICE, 0.00000000001d);
-        assertEquals(String.valueOf(mdConsumer.getBroker()), BRC);
-        assertEquals(mdConsumer.getSide(), SIDE);
-        assertEquals(mdConsumer.getPriceType(), PRICE_TYPE);
-        assertEquals(String.valueOf(mdConsumer.getValidUntil()), QUOTE_EXPIRY_DATE);
+        assertMarketDataMatches(mdConsumer);
 
 
         assertEquals(0, queue.getQueueSize());
@@ -90,20 +84,14 @@ public class CircularMMFQueueTest {
         assertFalse(queue.isFull());
     }
 
-    @Test
-    @DisplayName("Add one msg and consume it")
-    public void test2() {
-
-        MarketData md = getMarketData();
-        queue.add(md.getData());
-        assertFalse(queue.isEmpty());
-        assertFalse(queue.isFull());
-        assertEquals(1, queue.getQueueSize());
-        mdConsumer.setData(queue.get());
+    private void assertMarketDataMatches(MarketDataCons mdConsumer) {
         assertEquals(String.valueOf(mdConsumer.getSec()), SEC_ID);
-        assertEquals(0, queue.getQueueSize());
-        assertTrue(queue.isEmpty());
-        assertFalse(queue.isFull());
+        assertEquals(mdConsumer.getId(), ID);
+        assertEquals(mdConsumer.getPrice(), PRICE, 0.00000000001d);
+        assertEquals(String.valueOf(mdConsumer.getBroker()), BRC);
+        assertEquals(mdConsumer.getSide(), SIDE);
+        assertEquals(mdConsumer.getPriceType(), PRICE_TYPE);
+        assertEquals(String.valueOf(mdConsumer.getValidUntil()), QUOTE_EXPIRY_DATE);
     }
 
     @Test
@@ -111,15 +99,14 @@ public class CircularMMFQueueTest {
     public void test3() {
 
         MarketData md = getMarketData();
-        rangeClosed(1, SIZE / 2).forEach(j -> {
-            md.setPrice(j);
-            md.setId(j);
-            queue.add(md.getData());
-        });
+        rangeClosed(1, SIZE / 2).forEach(j -> queue.add(md.getData()));
+
         assertFalse(queue.isEmpty());
         assertFalse(queue.isFull());
         assertEquals(queue.getQueueSize(), SIZE / 2);
+
         rangeClosed(1, SIZE / 2).forEach(j -> queue.get());
+
         assertEquals(queue.getQueueSize(), 0);
         assertEquals(SIZE / 2, queue.messagesWritten());
         assertEquals(SIZE / 2, queue.messagesRead());
@@ -132,16 +119,17 @@ public class CircularMMFQueueTest {
     public void test4() {
 
         MarketData md = getMarketData();
-        rangeClosed(1, SIZE).forEach(j -> {
-            md.setPrice(j);
-            md.setId(j);
-            queue.add(md.getData());
-        });
+        rangeClosed(1, SIZE).forEach(j -> queue.add(md.getData()));
+
         assertEquals(queue.getQueueSize(), SIZE);
         assertFalse(queue.isEmpty());
         assertTrue(queue.isFull());
 
-        rangeClosed(1, SIZE).forEach(j -> queue.get());
+        MarketDataCons mdConsumer = new MarketDataCons(byteUtils);
+        rangeClosed(1, SIZE).forEach(j -> {
+            mdConsumer.setData(queue.get());
+            assertMarketDataMatches(mdConsumer);
+        });
 
         assertEquals(queue.getQueueSize(), 0);
         assertEquals(SIZE, queue.messagesWritten());
@@ -149,10 +137,7 @@ public class CircularMMFQueueTest {
         assertTrue(queue.isEmpty());
         assertFalse(queue.isFull());
 
-        rangeClosed(1, SIZE).forEach(j -> {
-            md.setPrice(j);
-            queue.add(md.getData());
-        });
+        rangeClosed(1, SIZE).forEach(j -> queue.add(md.getData()));
 
         assertEquals(queue.getQueueSize(), SIZE);
         assertFalse(queue.isEmpty());
