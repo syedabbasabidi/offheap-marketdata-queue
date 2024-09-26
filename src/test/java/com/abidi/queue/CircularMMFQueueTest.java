@@ -45,7 +45,7 @@ public class CircularMMFQueueTest {
     }
 
     @Test
-    @DisplayName("Queue created, ensure it's empty")
+    @DisplayName("Queue created, ensure it's properties (empty, size, messages written and read)")
     public void test0() {
         assertEquals(0, queue.getQueueSize());
         assertEquals(0, queue.messagesWritten());

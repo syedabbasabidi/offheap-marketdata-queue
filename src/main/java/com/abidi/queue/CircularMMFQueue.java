@@ -17,7 +17,7 @@ import static java.util.Arrays.stream;
 /**
  * Off heap circular queue, relies on linux dirty cache page mechanism to persist MMF.
  * Queue tested for single digit micro-second at 99.9 percentile.
- * linux dirty page frequency tuning:  sysctl -w vm.dirty_writeback_centisecs=50
+ * linux dirty page frequency tuned to 50:  sysctl -w vm.dirty_writeback_centisecs=50
  */
 
 public class CircularMMFQueue {
@@ -35,8 +35,11 @@ public class CircularMMFQueue {
     private final FileChannel queueChannel;
     private final FileChannel queueReaderContextChannel;
     private final int numberOfMessagesPerBuffer;
+
+    //declared volatile to flush store buffers when queue's used within the JVM
     private volatile long writeIndex;
     private volatile long readIndex;
+
     private final byte[] lastDequedMsg;
     private final String queuePath;
     private final String queueReaderContextPath;
@@ -71,33 +74,35 @@ public class CircularMMFQueue {
 
     public byte[] get() {
 
-        if (isReaderIndexHeadOfWriter()) return null;
-
+        if (isReaderIndexAheadOfWriters()) return null;
         if (isAMsgAwaitingAck()) return null;
+        if (isEmpty()) return null;
 
-        if (isEmpty()) {
-            //   LOG.debug("Queue is empty");
-            return null;
-        }
-        int index = readFromIndex();
-        int bufferIndex = getBufferIndex(index);
-        MappedByteBuffer buffer = queueBuffers[bufferIndex];
-        buffer.position(getIndexWithinBuffer(index, bufferIndex));
-        buffer.get(lastDequedMsg, 0, msgLength);
+        int nextIndexToReadFrom = nextIndexToReadFrom();
+        readNextMessage(nextIndexToReadFrom);
         updateReaderContext();
+        return lastDequedMsg;
+    }
+
+
+    public byte[] getWithAck() {
+
+        if (isReaderIndexAheadOfWriters()) return null;
+        if (isAMsgAwaitingAck()) return null;
+        if (isEmpty()) return null;
+
+        int nextIndexToReadFrom = nextIndexToReadFrom();
+        indexToAck = nextIndexToReadFrom;
+        readNextMessage(nextIndexToReadFrom);
         return lastDequedMsg;
     }
 
     public boolean add(byte[] msg) {
 
-        if (isReaderIndexHeadOfWriter()) return false;
+        if (isReaderIndexAheadOfWriters()) return false;
+        if (isFull()) return false;
 
-        if (isFull()) {
-            //   LOG.debug("Queue is full, cannot add. Queue Size {}, Queue Capacity {}", getQueueSize(), this.queueCapacity);
-            return false;
-        }
-
-        int bufferIndex = getBufferIndex(writeAtIndex());
+        int bufferIndex = getBufferIndexOfTheNextReadLocation(writeAtIndex());
         MappedByteBuffer buffer = queueBuffers[bufferIndex];
         buffer.position(getIndexWithinBuffer(writeAtIndex(), bufferIndex));
         buffer.put(msg, 0, msg.length);
@@ -105,35 +110,28 @@ public class CircularMMFQueue {
         return true;
     }
 
+
+    private void readNextMessage(int nextIndexToReadFrom) {
+        int bufferIndex = getBufferIndexOfTheNextReadLocation(nextIndexToReadFrom);
+        MappedByteBuffer buffer = queueBuffers[bufferIndex];
+        buffer.position(getIndexWithinBuffer(nextIndexToReadFrom, bufferIndex));
+        buffer.get(lastDequedMsg, 0, msgLength);
+    }
+
     public boolean isFull() {
         return (writeIndex - currentReaderIndex()) >= (queueCapacity);
     }
 
-    private boolean isReaderIndexHeadOfWriter() {
+    public boolean isEmpty() {
+        return readIndex >= currentWriterIndex();
+    }
+
+    private boolean isReaderIndexAheadOfWriters() {
         if (currentReaderIndex() > currentWriterIndex()) {
             LOG.error("Queue is invalid state, reader seems to have read more messages than written");
             return true;
         }
         return false;
-    }
-
-    public byte[] getWithoutAck() {
-
-        if (isReaderIndexHeadOfWriter()) return null;
-
-        if (isAMsgAwaitingAck()) return null;
-
-        if (isEmpty()) {
-            LOG.debug("Queue is empty");
-            return null;
-        }
-        int index = readFromIndex();
-        indexToAck = index;
-        int bufferIndex = getBufferIndex(index);
-        MappedByteBuffer buffer = queueBuffers[bufferIndex];
-        buffer.position(getIndexWithinBuffer(index, bufferIndex));
-        buffer.get(lastDequedMsg, 0, msgLength);
-        return lastDequedMsg;
     }
 
     private boolean isAMsgAwaitingAck() {
@@ -145,13 +143,13 @@ public class CircularMMFQueue {
     }
 
     public void ack() {
-        if (indexToAck == readFromIndex()) {
+        if (indexToAck == nextIndexToReadFrom()) {
             updateReaderContext();
             indexToAck = -1;
         }
     }
 
-    private int readFromIndex() {
+    private int nextIndexToReadFrom() {
         return (int) (readIndex % queueCapacity);
     }
 
@@ -160,7 +158,7 @@ public class CircularMMFQueue {
     }
 
 
-    private int getBufferIndex(int index) {
+    private int getBufferIndexOfTheNextReadLocation(int index) {
         int ret = index / numberOfMessagesPerBuffer;
         if (ret >= queueBuffers.length) {
             throw new IndexOutOfBoundsException("Index doesn't exist");
@@ -188,10 +186,6 @@ public class CircularMMFQueue {
         MappedByteBuffer firstQueueBuffer = queueBuffers[0];
         firstQueueBuffer.putLong(0, writeIndex + 1);
         writeIndex++; // flush store buffers
-    }
-
-    public boolean isEmpty() {
-        return readIndex >= currentWriterIndex();
     }
 
     private long currentWriterIndex() {
