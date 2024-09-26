@@ -218,6 +218,7 @@ public class CircularMMFQueue {
         totalBytesRequiredToAccommodateCapacity += TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT; //first X bytes reserved for writer's sequence
         int numberOfBuffers = (int) Math.ceil((double) totalBytesRequiredToAccommodateCapacity / (double) Integer.MAX_VALUE);
         MappedByteBuffer[] queueBuffers = new MappedByteBuffer[numberOfBuffers];
+
         for (int i = 0; i < numberOfBuffers; i++) {
             queueBuffers[i] = queueChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
         }

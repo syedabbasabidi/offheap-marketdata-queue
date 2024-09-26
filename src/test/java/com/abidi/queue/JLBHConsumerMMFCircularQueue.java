@@ -15,6 +15,10 @@ import static java.lang.System.nanoTime;
 
 public class JLBHConsumerMMFCircularQueue implements JLBHTask {
 
+    public static final int ITERATIONS = 5_000_000;
+    public static final int THROUGHPUT = 1_000_000;
+    public static final int RUNS = 3;
+    public static final int WARM_UP_ITERATIONS = 10_000;
     private JLBH jlbh;
     private CircularMMFQueue circularMMFQueue;
     private MarketData md;
@@ -30,7 +34,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
     public static void main(String[] args) {
 
         JLBHOptions jlbhOptions = new JLBHOptions()
-                .warmUpIterations(10_000).iterations(5_000_000).throughput(1_000_000).runs(3).accountForCoordinatedOmission(false)
+                .warmUpIterations(WARM_UP_ITERATIONS).iterations(ITERATIONS).throughput(THROUGHPUT).runs(RUNS).accountForCoordinatedOmission(false)
                 .recordOSJitter(false).jlbhTask(new JLBHConsumerMMFCircularQueue());
 
         new JLBH(jlbhOptions).start();
