@@ -95,7 +95,7 @@ public class CircularMMFQueueTest {
         assertEquals(mdConsumer.getSide(), SIDE);
         assertEquals(mdConsumer.getPriceType(), PRICE_TYPE);
         assertEquals(String.valueOf(mdConsumer.getValidUntil()), QUOTE_EXPIRY_DATE);
-        assertEquals(mdConsumer.getChecksum(), checksumUtil.checksum(md.getData()));
+        assertEquals(checksumUtil.checksum(md.getDataWithoutChecksum()), mdConsumer.getChecksum());
     }
 
     @Test

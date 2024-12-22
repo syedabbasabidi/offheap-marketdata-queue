@@ -20,6 +20,7 @@ public class MarketData {
     public static final int PRICE_TYPE_START_INDEX = 44;
     public static final int QUOTE_ID_START_INDEX = 45;
     public static final int CHECKSUM_INDEX = 49;
+    public static final int CHECKSUM_SIZE_IN_BYTES = 8;
     private final byte[] data;
 
     private final ByteBuffer securityMapper = allocateDirect(12);
@@ -110,6 +111,15 @@ public class MarketData {
 
     public byte[] getData() {
         return data;
+    }
+
+    public byte[] getDataWithoutChecksum() {
+        byte[] dataWithoutChecksum = new byte[OBJ_SIZE];
+        System.arraycopy(data, 0, dataWithoutChecksum, 0, OBJ_SIZE);
+        for (int i = CHECKSUM_INDEX; i < CHECKSUM_INDEX + CHECKSUM_SIZE_IN_BYTES; i++) {
+            dataWithoutChecksum[i] = 0;
+        }
+        return dataWithoutChecksum;
     }
 
 
