@@ -3,6 +3,7 @@ package com.abidi.queue;
 import com.abidi.marketdata.model.MarketData;
 import com.abidi.marketdata.model.MarketDataCons;
 import com.abidi.util.ByteUtils;
+import com.abidi.util.ChecksumUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,12 +31,14 @@ public class CircularMMFQueueTest {
     public static final byte PRICE_TYPE = 1;
     private CircularMMFQueue queue;
     private ByteUtils byteUtils;
+    private ChecksumUtil checksumUtil;
 
 
     @BeforeEach
     public void setup() throws IOException {
         byteUtils = new ByteUtils();
-        MarketData md = new MarketData(byteUtils);
+        checksumUtil = new ChecksumUtil();
+        MarketData md = new MarketData(byteUtils, checksumUtil);
         queue = getInstance(md.size(), SIZE, "/tmp");
     }
 
@@ -74,7 +77,7 @@ public class CircularMMFQueueTest {
         MarketDataCons mdConsumer = new MarketDataCons(byteUtils);
         mdConsumer.setData(queue.get());
 
-        assertMarketDataMatches(mdConsumer);
+        assertMarketDataMatches(mdConsumer, md);
 
 
         assertEquals(0, queue.getQueueSize());
@@ -84,7 +87,7 @@ public class CircularMMFQueueTest {
         assertFalse(queue.isFull());
     }
 
-    private void assertMarketDataMatches(MarketDataCons mdConsumer) {
+    private void assertMarketDataMatches(MarketDataCons mdConsumer, MarketData md) {
         assertEquals(String.valueOf(mdConsumer.getSec()), SEC_ID);
         assertEquals(mdConsumer.getId(), ID);
         assertEquals(mdConsumer.getPrice(), PRICE, 0.00000000001d);
@@ -92,6 +95,7 @@ public class CircularMMFQueueTest {
         assertEquals(mdConsumer.getSide(), SIDE);
         assertEquals(mdConsumer.getPriceType(), PRICE_TYPE);
         assertEquals(String.valueOf(mdConsumer.getValidUntil()), QUOTE_EXPIRY_DATE);
+        assertEquals(mdConsumer.getChecksum(), checksumUtil.checksum(md.getData()));
     }
 
     @Test
@@ -128,7 +132,7 @@ public class CircularMMFQueueTest {
         MarketDataCons mdConsumer = new MarketDataCons(byteUtils);
         rangeClosed(1, SIZE).forEach(j -> {
             mdConsumer.setData(queue.get());
-            assertMarketDataMatches(mdConsumer);
+            assertMarketDataMatches(mdConsumer, md);
         });
 
         assertEquals(queue.getQueueSize(), 0);
@@ -145,7 +149,7 @@ public class CircularMMFQueueTest {
     }
 
     private MarketData getMarketData() {
-        MarketData md = new MarketData(byteUtils);
+        MarketData md = new MarketData(byteUtils, checksumUtil);
         md.set(SEC_ID, PRICE, SIDE, IS_FIRM, PRICE_TYPE, BRC, QUOTE_EXPIRY_DATE, ID);
         return md;
     }

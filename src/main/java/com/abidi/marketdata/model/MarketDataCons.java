@@ -7,7 +7,7 @@ import static java.lang.String.valueOf;
 
 public class MarketDataCons {
 
-    private static final int OBJ_SIZE = 49;
+    private static final int OBJ_SIZE = 57;
     private final ByteUtils byteUtils;
     private final byte[] data;
     private boolean isFirm;
@@ -17,6 +17,7 @@ public class MarketDataCons {
     private final char[] broker = new char[3];
     private int priceType;
     private final char[] validUntil = new char[19];
+    private long checksum;
 
     private int id;
 
@@ -85,6 +86,15 @@ public class MarketDataCons {
         id = byteUtils.bytesToInt(data, 45, 4);
     }
 
+    public void checksum() {
+        checksum = byteUtils.bytesToLong(data, 49, 8);
+    }
+
+
+    public long getChecksum() {
+        return checksum;
+    }
+
     public void setData(byte[] data) {
         ByteArrayUtil.copy(data, this.data);
         firm();
@@ -95,6 +105,8 @@ public class MarketDataCons {
         broker();
         priceType();
         id();
+        checksum();
+
     }
 
     public boolean isFirm() {

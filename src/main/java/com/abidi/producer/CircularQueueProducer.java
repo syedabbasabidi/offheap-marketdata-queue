@@ -3,6 +3,7 @@ package com.abidi.producer;
 import com.abidi.marketdata.model.MarketData;
 import com.abidi.queue.CircularMMFQueue;
 import com.abidi.util.ByteUtils;
+import com.abidi.util.ChecksumUtil;
 import com.abidi.util.Latin1StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +17,7 @@ public class CircularQueueProducer {
     public static void main(String[] args) {
 
         LOG.info("Starting producer...");
-        MarketData md = new MarketData(new ByteUtils());
+        MarketData md = new MarketData(new ByteUtils(), new ChecksumUtil());
         Latin1StringUtil latin1Util = new Latin1StringUtil();
         CircularMMFQueue mmfQueue = getInstance(md);
 

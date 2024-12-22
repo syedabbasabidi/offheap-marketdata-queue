@@ -1,6 +1,7 @@
 package com.abidi.marketdata.model;
 
 import com.abidi.util.ByteUtils;
+import com.abidi.util.ChecksumUtil;
 
 import java.nio.ByteBuffer;
 
@@ -9,15 +10,16 @@ import static java.util.stream.IntStream.range;
 
 public class MarketData {
 
-    private static final int OBJ_SIZE = 49;
+    private static final int OBJ_SIZE = 57;
     public static final int SECURITY_START_INDEX = 2;
     public static final int FIRM_QUOTE_INDICATOR_INDEX = 0;
     public static final int SIDE_INDICATOR_INDEX = 1;
     public static final int PRICE_START_INDEX = 14;
     public static final int QUOTE_EXPIRY_START_INDEX = 22;
-    public static final int QUOTING_BROKER_STRAT_INDEX = 41;
+    public static final int QUOTING_BROKER_START_INDEX = 41;
     public static final int PRICE_TYPE_START_INDEX = 44;
     public static final int QUOTE_ID_START_INDEX = 45;
+    public static final int CHECKSUM_INDEX = 49;
     private final byte[] data;
 
     private final ByteBuffer securityMapper = allocateDirect(12);
@@ -25,8 +27,10 @@ public class MarketData {
     private final ByteBuffer dateMapper = allocateDirect(19);
 
     private final ByteUtils byteUtils;
+    private final ChecksumUtil checksumUtil;
 
-    public MarketData(ByteUtils byteUtils) {
+    public MarketData(ByteUtils byteUtils, ChecksumUtil checksumUtil) {
+        this.checksumUtil = checksumUtil;
         data = new byte[OBJ_SIZE];
         this.byteUtils = byteUtils;
     }
@@ -49,9 +53,7 @@ public class MarketData {
     }
 
     public void setPrice(double price) {
-
         byte[] bytes = byteUtils.longToBytes((long) (price * 1000));
-
         for (int i = 0, j = PRICE_START_INDEX; i < bytes.length; i++, j++) {
             data[j] = bytes[i];
         }
@@ -70,7 +72,7 @@ public class MarketData {
 
         range(0, broker.length()).map(broker::charAt).forEach(b -> brokerMapper.put((byte) b));
         brokerMapper.flip();
-        for (int i = 0, j = QUOTING_BROKER_STRAT_INDEX; i < 3; i++, j++) {
+        for (int i = 0, j = QUOTING_BROKER_START_INDEX; i < 3; i++, j++) {
             data[j] = brokerMapper.get();
         }
     }
@@ -86,6 +88,13 @@ public class MarketData {
         }
     }
 
+    public void setChecksum(long checksum) {
+        byte[] bytes = byteUtils.longToBytes(checksum);
+        for (int i = 0, j = CHECKSUM_INDEX; i < bytes.length; i++, j++) {
+            data[j] = bytes[i];
+        }
+    }
+
     public void set(String secId, double price, int side, boolean isFirm, byte priceType, String broker, String expiresAt, int id) {
         this.setSecurity(secId);
         this.setPrice(price);
@@ -95,6 +104,7 @@ public class MarketData {
         this.setBroker(broker);
         this.setExpiresAt(expiresAt);
         this.setId(id);
+        setChecksum(checksumUtil.checksum(data));
     }
 
 

@@ -18,6 +18,10 @@ import static java.util.Arrays.stream;
  * Off heap circular queue, relies on linux dirty cache page mechanism to persist MMF.
  * Queue tested for single digit micro-second at 99.9 percentile.
  * linux dirty page frequency tuned to 50:  sysctl -w vm.dirty_writeback_centisecs=50
+ *
+ * Disable write caching
+ *
+ * sudo hdparm -W0 /dev/sdX  # Disable write caching
  */
 
 public class CircularMMFQueue {
