@@ -42,9 +42,8 @@ public class CircularMMFQueue {
     private final FileChannel queueReaderContextChannel;
     private final int numberOfMessagesPerBuffer;
 
-    //declared volatile to flush store buffers when queue's used within the JVM
-    private volatile long writeIndex;
-    private volatile long readIndex;
+    private long writeIndex;
+    private long readIndex;
 
     private final byte[] lastDequedMsg;
     private final String queuePath;

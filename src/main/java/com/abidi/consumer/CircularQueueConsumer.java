@@ -3,6 +3,7 @@ package com.abidi.consumer;
 import com.abidi.marketdata.model.MarketDataCons;
 import com.abidi.queue.CircularMMFQueue;
 import com.abidi.util.ByteUtils;
+import net.openhft.affinity.Affinity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +27,7 @@ public class CircularQueueConsumer implements Runnable {
 
     public void run() {
 
+        Affinity.setAffinity(3);
         MarketDataCons marketData = new MarketDataCons(byteUtils);
         CircularMMFQueue mmfQueue = getInstance(marketData);
 

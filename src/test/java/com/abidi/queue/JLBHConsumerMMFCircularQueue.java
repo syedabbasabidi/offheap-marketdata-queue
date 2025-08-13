@@ -18,7 +18,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
 
     public static final int ITERATIONS = 5_000_000;
     public static final int THROUGHPUT = 1_000_000;
-    public static final int RUNS = 3;
+    public static final int RUNS = 16;
     public static final int WARM_UP_ITERATIONS = 10_000;
     private JLBH jlbh;
     private CircularMMFQueue circularMMFQueue;
@@ -50,13 +50,14 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
         try {
             circularMMFQueue = getInstance(md.size(), "/tmp");
             producerThread = new Thread(() -> {
-                while (true) {
+                while (!producerThread.isInterrupted()) {
                     md.setPrice(++price);
                     md.setId(id++);
                     circularMMFQueue.add(md.getData());
                 }
             });
-            //producerThread.start();
+            producerThread.setName("JLBH Producer");
+            producerThread.start();
         } catch (IOException e) {
             LOG.error("Error initializing test", e);
         }
@@ -71,6 +72,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
     @Override
     public void complete() {
         LOG.info("Number of messages writen {} and read {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead());
+        producerThread.interrupt();
     }
 
 }
