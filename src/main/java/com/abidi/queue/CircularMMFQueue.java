@@ -6,10 +6,13 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 
+import static java.nio.ByteOrder.BIG_ENDIAN;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static java.nio.file.Files.delete;
 import static java.util.Arrays.stream;
@@ -18,11 +21,11 @@ import static java.util.Arrays.stream;
  * Off heap circular queue, relies on linux dirty cache page mechanism to persist MMF.
  * Queue tested for single digit micro-second at 99.9 percentile.
  * linux dirty page frequency tuned to 50:
- *
+ * <p>
  * sysctl -w vm.dirty_writeback_centisecs=50
- *
+ * <p>
  * Disable write caching
- *
+ * <p>
  * sudo hdparm -W0 /dev/sdX  # Disable write caching
  */
 
@@ -41,6 +44,8 @@ public class CircularMMFQueue {
     private final FileChannel queueChannel;
     private final FileChannel queueReaderContextChannel;
     private final int numberOfMessagesPerBuffer;
+
+    static final VarHandle VH_LONG = MethodHandles.byteBufferViewVarHandle(long[].class, BIG_ENDIAN);
 
     private long writeIndex;
     private long readIndex;
@@ -179,22 +184,22 @@ public class CircularMMFQueue {
 
 
     private void updateReaderContext() {
-        readerContextBuffer.putLong(0, readIndex + 1);
-        readIndex++; //flush store buffers
+        VH_LONG.setOpaque(readerContextBuffer, 0, readIndex + 1);
+        readIndex++;
     }
 
     private long currentReaderIndex() {
-        return readerContextBuffer.getLong(0);
+        return (long) VH_LONG.getOpaque(readerContextBuffer, 0);
     }
 
     private void updateWriterContext() {
         MappedByteBuffer firstQueueBuffer = queueBuffers[0];
-        firstQueueBuffer.putLong(0, writeIndex + 1);
-        writeIndex++; // flush store buffers
+        VH_LONG.setRelease(firstQueueBuffer, 0, writeIndex + 1);
+        writeIndex++;
     }
 
     private long currentWriterIndex() {
-        return queueBuffers[0].getLong(0);
+        return (long) VH_LONG.getAcquire(queueBuffers[0], 0);
     }
 
     public static CircularMMFQueue getInstance(int msgSize, String path) throws IOException {
