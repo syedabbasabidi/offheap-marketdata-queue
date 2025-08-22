@@ -25,24 +25,24 @@ public class CircularQueueConsumer implements Runnable {
         circularQueueConsumer.run();
     }
 
-    public void run() {
+        public void run() {
 
-        Affinity.setAffinity(3);
-        MarketDataCons marketData = new MarketDataCons(byteUtils);
-        CircularMMFQueue mmfQueue = getInstance(marketData);
+            Affinity.setAffinity(3);
+            MarketDataCons marketData = new MarketDataCons(byteUtils);
+            CircularMMFQueue mmfQueue = getInstance(marketData);
 
-        if (mmfQueue == null) {
-            throw new RuntimeException("Failed to get instance of CircularMMFQueue");
-        }
+            if (mmfQueue == null) {
+                throw new RuntimeException("Failed to get instance   of CircularMMFQueue");
+            }
 
-        LOG.info("Consumer started...");
-        while (true) {
-            byte[] bytes = mmfQueue.get();
-            if (bytes != null) {
-                process(marketData, bytes);
+            LOG.info("Consumer started...");
+            while (true) {
+                byte[] bytes = mmfQueue.get();
+                if (bytes != null) {
+                    process(marketData, bytes);
+                }
             }
         }
-    }
 
 
     private static void process(MarketDataCons marketData, byte[] data) {
