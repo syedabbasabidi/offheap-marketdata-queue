@@ -84,7 +84,7 @@ public class CircularMMFQueue {
 
     public byte[] get() {
 
-        if (isReaderIndexAheadOfWriters()) return null;
+        if (isReaderIndexAhead()) return null;
         if (isAMsgAwaitingAck()) return null;
         if (isEmpty()) return null;
 
@@ -138,6 +138,14 @@ public class CircularMMFQueue {
 
     private boolean isReaderIndexAheadOfWriters() {
         if (currentReaderIndex() > currentWriterIndex()) {
+            LOG.error("Queue is invalid state, reader seems to have read more messages than written");
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isReaderIndexAhead() {
+        if (readIndex > currentWriterIndex()) {
             LOG.error("Queue is invalid state, reader seems to have read more messages than written");
             return true;
         }
