@@ -9,7 +9,7 @@ public class MarketDataCons {
 
     private static final int OBJ_SIZE = 57;
     private final ByteUtils byteUtils;
-    private final byte[] data;
+    private byte[] data;
     private boolean isFirm;
     private int side;
     private final char[] sec = new char[12];
@@ -96,7 +96,7 @@ public class MarketDataCons {
     }
 
     public void setData(byte[] data) {
-        ByteArrayUtil.copy(data, this.data);
+        this.data = data;
         firm();
         side();
         security();
