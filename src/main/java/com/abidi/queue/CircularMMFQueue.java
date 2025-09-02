@@ -33,7 +33,7 @@ public class CircularMMFQueue {
 
     public static final int DEFAULT_SIZE = 100_000;
     private static final String NAME = "OFF_HEAP_QUEUE";
-    public static final int TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT = 8;
+    public static final int TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING = 64;
 
     private final int msgLength;
     private final long queueCapacity;
@@ -187,7 +187,7 @@ public class CircularMMFQueue {
 
     private int getIndexWithinBuffer(int index, int bufferIndex) {
         int indexWithinBuffer = (index % numberOfMessagesPerBuffer) * msgLength;
-        return bufferIndex == 0 ? indexWithinBuffer + TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT : bufferIndex;
+        return bufferIndex == 0 ? indexWithinBuffer + TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING : bufferIndex;
     }
 
 
@@ -233,7 +233,7 @@ public class CircularMMFQueue {
     private MappedByteBuffer[] initializedBuffers(long msgSize, int queueCapacity) throws IOException {
 
         long totalBytesRequiredToAccommodateCapacity = msgSize * queueCapacity;
-        totalBytesRequiredToAccommodateCapacity += TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT; //first X bytes reserved for writer's sequence
+        totalBytesRequiredToAccommodateCapacity += TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING; //first X bytes reserved for writer's sequence
         int numberOfBuffers = (int) Math.ceil((double) totalBytesRequiredToAccommodateCapacity / (double) Integer.MAX_VALUE);
         MappedByteBuffer[] queueBuffers = new MappedByteBuffer[numberOfBuffers];
 

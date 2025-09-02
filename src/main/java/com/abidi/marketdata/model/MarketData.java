@@ -10,7 +10,7 @@ import static java.util.stream.IntStream.range;
 
 public class MarketData {
 
-    private static final int OBJ_SIZE = 57;
+    private static final int OBJ_SIZE = 64;
     public static final int SECURITY_START_INDEX = 2;
     public static final int FIRM_QUOTE_INDICATOR_INDEX = 0;
     public static final int SIDE_INDICATOR_INDEX = 1;
@@ -106,6 +106,9 @@ public class MarketData {
         this.setExpiresAt(expiresAt);
         this.setId(id);
         setChecksum(checksumUtil.checksum(data));
+        for (int i = 57; i < 64; i++) {
+            data[i] = 1;
+        }
     }
 
 
