@@ -106,6 +106,10 @@ public class MarketData {
         this.setExpiresAt(expiresAt);
         this.setId(id);
         setChecksum(checksumUtil.checksum(data));
+        paddingToComplete64Bytes();
+    }
+
+    private void paddingToComplete64Bytes() {
         for (int i = 57; i < 64; i++) {
             data[i] = 1;
         }

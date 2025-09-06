@@ -7,7 +7,7 @@ import static java.lang.String.valueOf;
 
 public class MarketDataCons {
 
-    private static final int OBJ_SIZE = 57;
+    private static final int OBJ_SIZE = 64;
     private final ByteUtils byteUtils;
     private byte[] data;
     private boolean isFirm;
