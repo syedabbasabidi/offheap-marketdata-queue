@@ -1,6 +1,8 @@
 package com.abidi.queue;
 
+import com.abidi.consumer.CircularQueueConsumer;
 import com.abidi.marketdata.model.MarketData;
+import com.abidi.marketdata.model.MarketDataCons;
 import com.abidi.util.ByteUtils;
 import com.abidi.util.ChecksumUtil;
 import net.openhft.chronicle.jlbh.JLBH;
@@ -17,21 +19,20 @@ import static java.lang.System.nanoTime;
 
 public class JLBHProducerMMFCircularQueue implements JLBHTask {
 
+    private static final Logger LOG = LoggerFactory.getLogger(JLBHProducerMMFCircularQueue.class);
     private JLBH jlbh;
     private CircularMMFQueue circularMMFQueue;
     private MarketData marketData;
-
-    private Thread consumerThread;
-
-    private static final Logger LOG = LoggerFactory.getLogger(JLBHProducerMMFCircularQueue.class);
     private int missedAdd;
+    private int i=0;
 
     public static void main(String[] args) {
-
         JLBHOptions jlbhOptions = new JLBHOptions()
-                .warmUpIterations(WARM_UP_ITERATIONS).iterations(ITERATIONS).throughput(THROUGHPUT).runs(RUNS).accountForCoordinatedOmission(false)
-                .recordOSJitter(false).jlbhTask(new JLBHProducerMMFCircularQueue());
-
+                .warmUpIterations(WARM_UP_ITERATIONS)
+                .iterations(ITERATIONS)
+                .throughput(THROUGHPUT)
+                .runs(RUNS)
+                .accountForCoordinatedOmission(false).recordOSJitter(false).jlbhTask(new JLBHProducerMMFCircularQueue());
 
         new JLBH(jlbhOptions).start();
     }
@@ -41,12 +42,11 @@ public class JLBHProducerMMFCircularQueue implements JLBHTask {
 
         this.jlbh = jlbh;
         marketData = new MarketData(new ByteUtils(), new ChecksumUtil());
-        marketData.set("GB00BJLR0J16", 101.12d, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", 1);
         try {
             circularMMFQueue = getInstance(marketData.size(), "/tmp");
             circularMMFQueue.reset();
-            //consumerThread = new Thread(new CircularQueueConsumer(new ByteUtils()));
-            //consumerThread.start();
+            Thread consumerThread = new Thread(new CircularQueueConsumer(new ByteUtils()));
+            consumerThread.start();
         } catch (IOException e) {
             LOG.error("Error initializing test", e);
         }
@@ -54,6 +54,7 @@ public class JLBHProducerMMFCircularQueue implements JLBHTask {
 
     @Override
     public void run(long startTimeNS) {
+        marketData.set("GB00BJLR0J16", 101.12d + i, 1, true, (byte) 1, "BRC", "2022-09-14:22:10:13", i++);
         if (!circularMMFQueue.add(marketData.getData())) {
             missedAdd++;
         }
@@ -62,7 +63,7 @@ public class JLBHProducerMMFCircularQueue implements JLBHTask {
 
     @Override
     public void complete() {
-        LOG.info("Number of messages writen {} and read {}, missed writes {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead(), missedAdd);
+        LOG.info("Number of messages written {} and read {}, missed writes {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead(), missedAdd);
     }
 
 }

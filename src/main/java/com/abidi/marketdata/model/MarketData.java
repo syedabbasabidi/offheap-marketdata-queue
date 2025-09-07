@@ -51,6 +51,7 @@ public class MarketData {
         securityMapper.flip();
         //dump security in object buffer
         range(SECURITY_START_INDEX, PRICE_START_INDEX).forEach(i -> data[i] = securityMapper.get());
+        securityMapper.clear();
     }
 
     public void setPrice(double price) {
@@ -67,6 +68,7 @@ public class MarketData {
         for (int i = 0, j = QUOTE_EXPIRY_START_INDEX; i < 19; i++, j++) {
             data[j] = dateMapper.get();
         }
+        dateMapper.clear();
     }
 
     public void setBroker(String broker) {
@@ -76,6 +78,7 @@ public class MarketData {
         for (int i = 0, j = QUOTING_BROKER_START_INDEX; i < 3; i++, j++) {
             data[j] = brokerMapper.get();
         }
+        brokerMapper.clear();
     }
 
     public void setPriceType(byte priceType) {
