@@ -6,7 +6,6 @@ import com.abidi.util.ChecksumUtil;
 import java.nio.ByteBuffer;
 
 import static java.nio.ByteBuffer.allocateDirect;
-import static java.util.stream.IntStream.range;
 
 public class MarketData {
 
@@ -46,11 +45,16 @@ public class MarketData {
 
     public void setSecurity(String id) {
         //dump security in sec buffer
-        range(0, id.length()).map(id::charAt).forEach(b -> securityMapper.put((byte) b));
+        for (int i1 = 0; i1 < id.length(); i1++) {
+            int b = id.charAt(i1);
+            securityMapper.put((byte) b);
+        }
         //Make sec buffer readable
         securityMapper.flip();
         //dump security in object buffer
-        range(SECURITY_START_INDEX, PRICE_START_INDEX).forEach(i -> data[i] = securityMapper.get());
+        for (int i = SECURITY_START_INDEX; i < PRICE_START_INDEX; i++) {
+            data[i] = securityMapper.get();
+        }
         securityMapper.clear();
     }
 
@@ -63,7 +67,10 @@ public class MarketData {
 
     public void setExpiresAt(String expiresAt) {
 
-        range(0, expiresAt.length()).map(expiresAt::charAt).forEach(b -> dateMapper.put((byte) b));
+        for (int i1 = 0; i1 < expiresAt.length(); i1++) {
+            int b = expiresAt.charAt(i1);
+            dateMapper.put((byte) b);
+        }
         dateMapper.flip();
         for (int i = 0, j = QUOTE_EXPIRY_START_INDEX; i < 19; i++, j++) {
             data[j] = dateMapper.get();
@@ -73,7 +80,10 @@ public class MarketData {
 
     public void setBroker(String broker) {
 
-        range(0, broker.length()).map(broker::charAt).forEach(b -> brokerMapper.put((byte) b));
+        for (int i1 = 0; i1 < broker.length(); i1++) {
+            int b = broker.charAt(i1);
+            brokerMapper.put((byte) b);
+        }
         brokerMapper.flip();
         for (int i = 0, j = QUOTING_BROKER_START_INDEX; i < 3; i++, j++) {
             data[j] = brokerMapper.get();
