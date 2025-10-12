@@ -1,6 +1,7 @@
 package com.abidi.queue;
 
 import com.abidi.marketdata.model.MarketData;
+import com.abidi.marketdata.model.MarketDataCons;
 import com.abidi.util.ByteUtils;
 import com.abidi.util.ChecksumUtil;
 import net.openhft.chronicle.jlbh.JLBH;
@@ -30,7 +31,7 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
     private int id;
 
     private static final Logger LOG = LoggerFactory.getLogger(JLBHConsumerMMFCircularQueue.class);
-
+    private MarketDataCons marketData = new MarketDataCons(new ByteUtils());
 
     public static void main(String[] args) {
 
@@ -66,12 +67,15 @@ public class JLBHConsumerMMFCircularQueue implements JLBHTask {
     @Override
     public void run(long startTimeNS) {
         bytes = circularMMFQueue.get();
+        while(bytes == null) {
+            bytes = circularMMFQueue.get();
+        }
+        marketData.setData(bytes);
         jlbh.sampleNanos((nanoTime() - 10) - startTimeNS);
     }
-
     @Override
     public void complete() {
-        LOG.info("Number of messages writen {} and read {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead());
+        LOG.info("Number of messages written {} and read {}", circularMMFQueue.messagesWritten(), circularMMFQueue.messagesRead());
         producerThread.interrupt();
     }
 

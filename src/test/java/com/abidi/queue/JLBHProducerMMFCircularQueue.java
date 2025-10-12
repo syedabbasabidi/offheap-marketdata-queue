@@ -44,9 +44,6 @@ public class JLBHProducerMMFCircularQueue implements JLBHTask {
         marketData = new MarketData(new ByteUtils(), new ChecksumUtil());
         try {
             circularMMFQueue = getInstance(marketData.size(), "/tmp");
-            circularMMFQueue.reset();
-            Thread consumerThread = new Thread(new CircularQueueConsumer(new ByteUtils()));
-            consumerThread.start();
         } catch (IOException e) {
             LOG.error("Error initializing test", e);
         }

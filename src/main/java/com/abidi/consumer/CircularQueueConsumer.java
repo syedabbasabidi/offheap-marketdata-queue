@@ -8,10 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Optional;
 
 public class CircularQueueConsumer implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(CircularQueueConsumer.class);
+    public static final int PIN_TO_CPU = 0;
     private final ByteUtils byteUtils;
 
     public CircularQueueConsumer(ByteUtils byteUtils) {
@@ -19,43 +21,39 @@ public class CircularQueueConsumer implements Runnable {
     }
 
     public static void main(String[] args) {
-
         LOG.info("Starting consumer ...");
         CircularQueueConsumer circularQueueConsumer = new CircularQueueConsumer(new ByteUtils());
         circularQueueConsumer.run();
     }
 
-        public void run() {
+    public void run() {
 
-            Affinity.setAffinity(3);
-            MarketDataCons marketData = new MarketDataCons(byteUtils);
-            CircularMMFQueue mmfQueue = getInstance(marketData);
+        MarketDataCons marketData = new MarketDataCons(byteUtils);
+        Optional<CircularMMFQueue> mmfQueueOp = getInstance(marketData);
 
-            if (mmfQueue == null) {
-                throw new RuntimeException("Failed to get instance   of CircularMMFQueue");
-            }
-
-            LOG.info("Consumer started...");
-            while (true) {
-                byte[] bytes = mmfQueue.get();
-                if (bytes != null) {
-                    process(marketData, bytes);
-                }
-            }
+        if (mmfQueueOp.isEmpty()) {
+            throw new RuntimeException("Failed to get instance of CircularMMFQueue");
         }
 
+        Affinity.setAffinity(PIN_TO_CPU);
+        LOG.info("Consumer started...");
 
-    private static void process(MarketDataCons marketData, byte[] data) {
-        marketData.setData(data);
-        LOG.debug("Message received {}", marketData);
+        CircularMMFQueue mmfQueue = mmfQueueOp.get();
+        while (true) {
+            byte[] bytes = mmfQueue.get();
+            if (bytes != null) {
+                marketData.setData(bytes);
+                LOG.debug("Message received {}", marketData);
+            }
+        }
     }
 
-    private static CircularMMFQueue getInstance(MarketDataCons marketData) {
+    private static Optional<CircularMMFQueue> getInstance(MarketDataCons marketData) {
         try {
-            return CircularMMFQueue.getInstance(marketData.size(), "/tmp");
+            return Optional.of(CircularMMFQueue.getInstance(marketData.size(), "/tmp"));
         } catch (IOException e) {
             LOG.error("Failed to set up queue", e);
-            return null;
+            return Optional.empty();
         }
     }
 }
