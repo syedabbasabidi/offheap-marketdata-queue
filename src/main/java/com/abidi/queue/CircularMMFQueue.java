@@ -116,6 +116,7 @@ public class CircularMMFQueue {
         MappedByteBuffer buffer = queueBuffers[bufferIndex];
         buffer.position(getIndexWithinBuffer(writeAtIndex(), bufferIndex));
         buffer.put(msg, 0, msg.length);
+        VarHandle.fullFence();
         updateWriterContext();
         return true;
     }
