@@ -79,19 +79,32 @@ public class CircularMMFQueue {
         lastDequedMsg = new byte[msgSize];
         numberOfMessagesPerBuffer = Integer.MAX_VALUE / msgSize;
 
+        if (isReaderIndexAheadOfWriters()) {
+            throw new RuntimeException("Invalid queue state");
+        }
+
         LOG.info("Queue is setup with size {}, reader is at {}, writer is at {}, queue-size {}", queueCapacity, readIndex, writeIndex, getQueueSize());
     }
 
     public byte[] get() {
 
-        if (isReaderIndexAhead()) return null;
-        if (isAMsgAwaitingAck()) return null;
         if (isEmpty()) return null;
 
-        int nextIndexToReadFrom = nextIndexToReadFrom();
-        readNextMessage(nextIndexToReadFrom);
+        readNextMessage(nextIndexToReadFrom());
         updateReaderContext();
         return lastDequedMsg;
+    }
+
+    public boolean add(byte[] msg) {
+
+        if (isFull()) return false;
+
+        int bufferIndex = getBufferIndexOf(writeAtIndex());
+        MappedByteBuffer buffer = queueBuffers[bufferIndex];
+        buffer.position(getIndexWithinBuffer(writeAtIndex(), bufferIndex));
+        buffer.put(msg, 0, msg.length);
+        updateWriterContext();
+        return true;
     }
 
 
@@ -107,30 +120,16 @@ public class CircularMMFQueue {
         return lastDequedMsg;
     }
 
-    public boolean add(byte[] msg) {
-
-        if (isReaderIndexAheadOfWriters()) return false;
-        if (isFull()) return false;
-
-        int bufferIndex = getBufferIndexOfTheNextReadLocation(writeAtIndex());
-        MappedByteBuffer buffer = queueBuffers[bufferIndex];
-        buffer.position(getIndexWithinBuffer(writeAtIndex(), bufferIndex));
-        buffer.put(msg, 0, msg.length);
-        VarHandle.fullFence();
-        updateWriterContext();
-        return true;
-    }
-
 
     private void readNextMessage(int nextIndexToReadFrom) {
-        int bufferIndex = getBufferIndexOfTheNextReadLocation(nextIndexToReadFrom);
+        int bufferIndex = getBufferIndexOf(nextIndexToReadFrom);
         MappedByteBuffer buffer = queueBuffers[bufferIndex];
         buffer.position(getIndexWithinBuffer(nextIndexToReadFrom, bufferIndex));
         buffer.get(lastDequedMsg, 0, msgLength);
     }
 
     public boolean isFull() {
-        return (writeIndex - currentReaderIndex()) >= (queueCapacity);
+        return (writeIndex - currentReaderIndex()) >= queueCapacity;
     }
 
     public boolean isEmpty() {
@@ -139,14 +138,6 @@ public class CircularMMFQueue {
 
     private boolean isReaderIndexAheadOfWriters() {
         if (currentReaderIndex() > currentWriterIndex()) {
-            LOG.error("Queue is invalid state, reader seems to have read more messages than written");
-            return true;
-        }
-        return false;
-    }
-
-    private boolean isReaderIndexAhead() {
-        if (readIndex > currentWriterIndex()) {
             LOG.error("Queue is invalid state, reader seems to have read more messages than written");
             return true;
         }
@@ -177,7 +168,7 @@ public class CircularMMFQueue {
     }
 
 
-    private int getBufferIndexOfTheNextReadLocation(int index) {
+    private int getBufferIndexOf(int index) {
         int ret = index / numberOfMessagesPerBuffer;
         if (ret >= queueBuffers.length) {
             throw new IndexOutOfBoundsException("Index doesn't exist");
