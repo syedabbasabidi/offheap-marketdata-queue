@@ -1,4 +1,4 @@
-package com.abidi.consumer;
+package com.abidi.queue;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -36,6 +36,9 @@ public class SPSCLockFreeCircularQueue {
         elements[writerIndex % elements.length] = msg;
         WRITER_INDEX_VH.setRelease(this, ++writerIndex);
     }
+    public boolean isFull() {
+        return writerIndex - (int) READER_INDEX_VH.getOpaque(this) >= elements.length;
+    }
 
     public String remove() {
 
@@ -45,10 +48,6 @@ public class SPSCLockFreeCircularQueue {
         String msg = elements[readerIndex % elements.length];
         READER_INDEX_VH.setOpaque(this, ++readerIndex);
         return msg;
-    }
-
-    public boolean isFull() {
-        return writerIndex - (int) READER_INDEX_VH.getOpaque(this) >= elements.length;
     }
 
     public boolean isEmpty() {
