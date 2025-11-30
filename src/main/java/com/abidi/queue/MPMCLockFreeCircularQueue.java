@@ -5,9 +5,13 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MPMCLockFreeCircularQueue {
 
     private final Slot[] array;
+    private long p00, p01, p02, p03, p04, p05, p06;
     private final AtomicLong producerSeqNum = new AtomicLong(0);
+    private long p10, p11, p12, p13, p14, p15, p16;
     private final AtomicLong consumerSeqNum = new AtomicLong(0);
-    private final int sizeAnd;
+    private long p20, p21, p22, p23, p24, p25, p26;
+
+    private final int mask;
 
     public MPMCLockFreeCircularQueue(int size) {
 
@@ -18,7 +22,7 @@ public class MPMCLockFreeCircularQueue {
         for (int i = 0; i < size; i++) {
             array[i] = new Slot("", 0);
         }
-        sizeAnd = size - 1;
+        mask = size - 1;
     }
 
     public boolean add(String msg) {
@@ -31,8 +35,8 @@ public class MPMCLockFreeCircularQueue {
             }
 
             if (producerSeqNum.compareAndSet(currentIndex, currentIndex + 1)) {
-                array[(int) (currentIndex & sizeAnd)].msg = msg;
-                array[(int) (currentIndex & sizeAnd)].msgNum = currentIndex + 1;
+                array[(int) (currentIndex & mask)].msg = msg;
+                array[(int) (currentIndex & mask)].msgNum = currentIndex + 1;
                 return true;
             }
         }
@@ -47,11 +51,11 @@ public class MPMCLockFreeCircularQueue {
                 return null;
             }
 
-            if (array[(int) currentIndex & sizeAnd].msgNum != currentIndex + 1) {
+            if (array[(int) currentIndex & mask].msgNum != currentIndex + 1) {
                 continue;
             }
 
-            Slot slot = array[(int) (currentIndex & sizeAnd)];
+            Slot slot = array[(int) (currentIndex & mask)];
             if (consumerSeqNum.compareAndSet(currentIndex, currentIndex + 1)) {
                 return slot.msg;
             }
