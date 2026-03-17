@@ -15,7 +15,6 @@ import java.nio.file.Path;
 import static java.nio.ByteOrder.BIG_ENDIAN;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static java.nio.file.Files.delete;
-import static java.util.Arrays.stream;
 
 /**
  * Off heap circular queue, relies on linux dirty cache page mechanism to persist MMF.
@@ -179,7 +178,7 @@ public class CircularMMFQueue {
 
     private int getIndexWithinBuffer(int index, int bufferIndex) {
         int indexWithinBuffer = (index % numberOfMessagesPerBuffer) * msgLength;
-        return bufferIndex == 0 ? indexWithinBuffer + TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING : bufferIndex;
+        return bufferIndex == 0 ? indexWithinBuffer + TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING : indexWithinBuffer;
     }
 
 
@@ -243,13 +242,11 @@ public class CircularMMFQueue {
     }
 
     public void reset() {
-        stream(this.queueBuffers).forEach(MappedByteBuffer::clear);
-        this.readerContextBuffer.putInt(0, 0);
-        this.readerContextBuffer.clear();
         this.readIndex = 0;
         this.writeIndex = 0;
-        readerContextBuffer.putLong(0, readIndex);
-        queueBuffers[0].putLong(0, writeIndex);
+        this.indexToAck = -1;
+        VH_LONG.setOpaque(readerContextBuffer, 0, readIndex);
+        VH_LONG.setRelease(queueBuffers[0], 0, writeIndex);
     }
 
     public void cleanup() {
