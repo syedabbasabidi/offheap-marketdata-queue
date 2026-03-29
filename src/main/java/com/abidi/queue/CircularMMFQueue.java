@@ -28,7 +28,7 @@ import static java.nio.file.Files.delete;
  * sudo hdparm -W0 /dev/sdX  # Disable write caching
  */
 
-public class CircularMMFQueue {
+public class CircularMMFQueue implements AutoCloseable {
 
     public static final int DEFAULT_SIZE = 100_000;
     private static final String NAME = "OFF_HEAP_QUEUE";
@@ -57,6 +57,13 @@ public class CircularMMFQueue {
     private int indexToAck = -1;
 
     public CircularMMFQueue(int msgSize, int queueCapacity, String path) throws IOException {
+
+        if (msgSize <= 0) {
+            throw new IllegalArgumentException("msgSize must be positive, got " + msgSize);
+        }
+        if (queueCapacity <= 0) {
+            throw new IllegalArgumentException("queueCapacity must be positive, got " + queueCapacity);
+        }
 
         this.msgLength = msgSize;
         this.queueCapacity = queueCapacity;
@@ -96,6 +103,9 @@ public class CircularMMFQueue {
 
     public boolean add(byte[] msg) {
 
+        if (msg.length != msgLength) {
+            throw new IllegalArgumentException("Expected message of " + msgLength + " bytes, got " + msg.length);
+        }
         if (isFull()) return false;
 
         int bufferIndex = getBufferIndexOf(writeAtIndex());
@@ -268,5 +278,10 @@ public class CircularMMFQueue {
         } catch (IOException e) {
             LOG.error("Failed to close underlying file", e);
         }
+    }
+
+    @Override
+    public void close() {
+        closeQueue();
     }
 }
