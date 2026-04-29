@@ -3,7 +3,7 @@ package com.abidi.queue;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
-public class SPSCLockFreeCircularQueue {
+public class SPSCLockFreeCircularQueue implements SPSCCircularQueue {
 
     private static final VarHandle READER_INDEX_VH;
     private static final VarHandle WRITER_INDEX_VH;
@@ -41,33 +41,29 @@ public class SPSCLockFreeCircularQueue {
 
 
     public boolean add(String msg) {
-        if (isFull()) {
+        long currentWriterIndex = writerIndex;
+        long currentReaderIndex = (long) READER_INDEX_VH.getAcquire(this);
+        if (currentWriterIndex - currentReaderIndex >= elements.length) {
             return false;
         }
-        int index = (int) (writerIndex & mask);
+        int index = (int) (currentWriterIndex & mask);
         elements[index] = msg;
-        WRITER_INDEX_VH.setRelease(this, ++writerIndex);
+        WRITER_INDEX_VH.setRelease(this, currentWriterIndex + 1);
         return true;
-    }
-
-    public boolean isFull() {
-        return writerIndex -  (long) READER_INDEX_VH.getOpaque(this) >= elements.length;
     }
 
     public String get() {
 
-        if (isEmpty()) {
+        long currentReaderIndex = readerIndex;
+        long currentWriterIndex = (long) WRITER_INDEX_VH.getAcquire(this);
+        if (currentReaderIndex == currentWriterIndex) {
             return null;
         }
 
-        int index = (int) (readerIndex & mask);
+        int index = (int) (currentReaderIndex & mask);
         String msg = elements[index];
-        READER_INDEX_VH.setOpaque(this, ++readerIndex);
+        READER_INDEX_VH.setRelease(this, currentReaderIndex + 1);
         return msg;
-    }
-
-    public boolean isEmpty() {
-        return readerIndex == (long) WRITER_INDEX_VH.getAcquire(this);
     }
 
 }
