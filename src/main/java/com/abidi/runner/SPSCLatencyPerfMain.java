@@ -4,6 +4,7 @@ import com.abidi.consumer.SPSCQueueConsumer;
 import com.abidi.producer.SPSCQueueProducer;
 import com.abidi.queue.SPSCCircularQueue;
 import com.abidi.queue.SPSCLockFreeCircularQueue;
+import com.abidi.queue.SPSCVolatileCircularQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +17,7 @@ public class SPSCLatencyPerfMain {
         int queueSize = args.length > 0 ? Integer.parseInt(args[0]) : DEFAULT_QUEUE_SIZE;
         validatePowerOfTwo(queueSize);
 
-        SPSCCircularQueue queue = new SPSCLockFreeCircularQueue(queueSize);
+        SPSCCircularQueue queue = new SPSCVolatileCircularQueue(queueSize);
 
         SPSCQueueProducer producer = new SPSCQueueProducer(queue);
         SPSCQueueConsumer consumer = new SPSCQueueConsumer(queue);
@@ -38,6 +39,10 @@ public class SPSCLatencyPerfMain {
         LOG.info("Starting SPSC latency harness with queueSize={}", queueSize);
         producerThread.start();
         consumerThread.start();
+
+        Thread.sleep(120_000);
+        producerThread.interrupt();
+        consumerThread.interrupt();
 
         producerThread.join();
         consumerThread.join();

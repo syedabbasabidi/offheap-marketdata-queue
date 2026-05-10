@@ -1,14 +1,15 @@
 package com.abidi.queue;
 
+import jdk.internal.vm.annotation.Contended;
+
 public class SPSCVolatileCircularQueue implements SPSCCircularQueue {
 
-    private long p00, p01, p02, p03, p04, p05, p06;
-    private volatile long readerIndex;
-    private long p10, p11, p12, p13, p14, p15, p16;
-    private volatile long writerIndex;
-    private long p20, p21, p22, p23, p24, p25, p26;
+    @Contended("readerIndex")  private volatile long readerIndex;
+    @Contended("readerIndex") private volatile long writerIndex;
+    private static final int SLOT_LONGS = 16;
+    private static final int SLOT_SHIFT = 4;
 
-    private final String[] elements;
+    private final long[] elements;
     private final int mask;
 
     public SPSCVolatileCircularQueue(int size) {
@@ -19,33 +20,33 @@ public class SPSCVolatileCircularQueue implements SPSCCircularQueue {
 
         readerIndex = 0;
         writerIndex = 0;
-        elements = new String[size];
+        elements = new long[size * SLOT_LONGS];
         mask = size - 1;
     }
 
     @Override
-    public boolean add(String msg) {
+    public boolean add(long msg) {
         long currentWriterIndex = writerIndex;
         if (currentWriterIndex - readerIndex >= elements.length) {
             return false;
         }
         int index = (int) (currentWriterIndex & mask);
-        elements[index] = msg;
-        writerIndex++;  // volatile write — acts as release fence
+        elements[index << SLOT_SHIFT] = msg;
+        writerIndex++;
         return true;
     }
 
     @Override
-    public String get() {
+    public long get() {
 
         long currentReaderIndex = readerIndex;
         if (currentReaderIndex == writerIndex) {
-            return null;
+            return -1;
         }
 
         int index = (int) (currentReaderIndex & mask);
-        String msg = elements[index];
-        readerIndex++;  // volatile write — acts as release fence
+        long msg = elements[index << SLOT_SHIFT];
+        readerIndex++;
         return msg;
     }
 

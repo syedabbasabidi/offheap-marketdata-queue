@@ -9,6 +9,7 @@ public class SPSCQueueProducer implements Runnable {
 
     private final SPSCCircularQueue queue;
     private static final Logger LOG = LoggerFactory.getLogger(SPSCQueueProducer.class);
+    private long messagesProducer = 0;
 
 
     public SPSCQueueProducer(SPSCCircularQueue queue) {
@@ -20,14 +21,12 @@ public class SPSCQueueProducer implements Runnable {
         Affinity.setAffinity(0);
 
         LOG.info("Producer started...");
-        long sentAt = System.nanoTime();
-        String time = Long.toString(sentAt);
-        while (true) {
-            if (!queue.add(time)) {
+        while (!Thread.currentThread().isInterrupted()) {
+            if (!queue.add(System.nanoTime())) {
                 Thread.onSpinWait();
             }
+            messagesProducer++;
         }
-
+        LOG.info("Producer stopped. Total messages produced={}", messagesProducer);
     }
 }
-

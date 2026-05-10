@@ -2,19 +2,19 @@ package com.abidi.queue;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import jdk.internal.vm.annotation.Contended;
 
 public class SPSCLockFreeCircularQueue implements SPSCCircularQueue {
 
     private static final VarHandle READER_INDEX_VH;
     private static final VarHandle WRITER_INDEX_VH;
+    @Contended("readerIndex") private long readerIndex;
+    @Contended("writerIndex") private long writerIndex;
+    private static final int SLOT_LONGS = 16;
+    private static final int SLOT_SHIFT = 4;
 
-    private long p00, p01, p02, p03, p04, p05, p06;
-    private long readerIndex;
-    private long p10, p11, p12, p13, p14, p15, p16;
-    private long writerIndex;
-    private long p20, p21, p22, p23, p24, p25, p26;
 
-    private final String[] elements;
+    private final long[] elements;
     private final int mask;
 
     static {
@@ -35,33 +35,33 @@ public class SPSCLockFreeCircularQueue implements SPSCCircularQueue {
 
         readerIndex = 0;
         writerIndex = 0;
-        elements = new String[size];
+        elements = new long[size * SLOT_LONGS];
         mask = size - 1;
     }
 
 
-    public boolean add(String msg) {
+    public boolean add(long msg) {
         long currentWriterIndex = writerIndex;
         long currentReaderIndex = (long) READER_INDEX_VH.getAcquire(this);
         if (currentWriterIndex - currentReaderIndex >= elements.length) {
             return false;
         }
         int index = (int) (currentWriterIndex & mask);
-        elements[index] = msg;
+        elements[index << SLOT_SHIFT] = msg;
         WRITER_INDEX_VH.setRelease(this, currentWriterIndex + 1);
         return true;
     }
 
-    public String get() {
+    public long get() {
 
         long currentReaderIndex = readerIndex;
         long currentWriterIndex = (long) WRITER_INDEX_VH.getAcquire(this);
         if (currentReaderIndex == currentWriterIndex) {
-            return null;
+            return -1;
         }
 
         int index = (int) (currentReaderIndex & mask);
-        String msg = elements[index];
+        long msg = elements[index << SLOT_SHIFT];
         READER_INDEX_VH.setRelease(this, currentReaderIndex + 1);
         return msg;
     }
