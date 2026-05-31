@@ -17,10 +17,10 @@ public class SPSCLatencyPerfMain {
         int queueSize = args.length > 0 ? Integer.parseInt(args[0]) : DEFAULT_QUEUE_SIZE;
         validatePowerOfTwo(queueSize);
 
-        SPSCCircularQueue queue = new SPSCVolatileCircularQueue(queueSize);
+        SPSCCircularQueue queue = new SPSCLockFreeCircularQueue(queueSize);
 
-        SPSCQueueProducer producer = new SPSCQueueProducer(queue);
-        SPSCQueueConsumer consumer = new SPSCQueueConsumer(queue);
+        SPSCQueueProducer producer = new SPSCQueueProducer(queue, true);
+        SPSCQueueConsumer consumer = new SPSCQueueConsumer(queue, true);
 
         Thread producerThread = new Thread(producer, "spsc-producer");
         Thread consumerThread = new Thread(consumer, "spsc-consumer");
@@ -40,7 +40,7 @@ public class SPSCLatencyPerfMain {
         producerThread.start();
         consumerThread.start();
 
-        Thread.sleep(120_000);
+        Thread.sleep(60_000);
         producerThread.interrupt();
         consumerThread.interrupt();
 
