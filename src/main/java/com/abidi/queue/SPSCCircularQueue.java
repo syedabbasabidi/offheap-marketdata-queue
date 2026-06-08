@@ -1,13 +1,13 @@
 package com.abidi.queue;
 
-public interface SPSCCircularQueue {
+public interface SPSCCircularQueue<T> {
 
-    boolean add(long msg);
+    boolean add(T msg);
 
-    long get();
+    T get();
 
-    boolean batchAdd(long[] messages);
+    boolean batchAdd(T[] messages);
 
-    boolean batchGet(long[] buffer);
+    boolean batchGet(T[] buffer);
 
 }

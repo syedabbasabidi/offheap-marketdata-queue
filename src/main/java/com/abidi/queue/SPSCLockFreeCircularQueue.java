@@ -1,11 +1,12 @@
 package com.abidi.queue;
 
+import com.abidi.marketdata.model.MarketData;
 import jdk.internal.vm.annotation.Contended;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
-public class SPSCLockFreeCircularQueue implements SPSCCircularQueue {
+public class SPSCLockFreeCircularQueue implements SPSCCircularQueue<MarketData> {
 
     private static final VarHandle READER_INDEX_VH;
     private static final VarHandle WRITER_INDEX_VH;
@@ -18,7 +19,7 @@ public class SPSCLockFreeCircularQueue implements SPSCCircularQueue {
     private static final int SLOT_SHIFT = 4;
 
 
-    private final long[] elements;
+    private final MarketData[] elements;
     private final int mask;
 
     static {
@@ -39,13 +40,13 @@ public class SPSCLockFreeCircularQueue implements SPSCCircularQueue {
 
         readerIndex = 0;
         writerIndex = 0;
-        elements = new long[size * SLOT_LONGS];
+        elements = new MarketData[size * SLOT_LONGS];
         mask = size - 1;
         capacity = size;
     }
 
 
-    public boolean batchAdd(long[] messages) {
+    public boolean batchAdd(MarketData[] messages) {
 
         long currentWriterIndex = writerIndex;
         long currentReaderIndex = (long) READER_INDEX_VH.getAcquire(this);
@@ -64,7 +65,7 @@ public class SPSCLockFreeCircularQueue implements SPSCCircularQueue {
 
     }
 
-    public boolean add(long msg) {
+    public boolean add(MarketData msg) {
         long currentWriterIndex = writerIndex;
         long currentReaderIndex = (long) READER_INDEX_VH.getAcquire(this);
         if (currentWriterIndex - currentReaderIndex >= capacity) {
@@ -76,7 +77,7 @@ public class SPSCLockFreeCircularQueue implements SPSCCircularQueue {
         return true;
     }
 
-    public boolean batchGet(long[] buffer) {
+    public boolean batchGet(MarketData[] buffer) {
 
         long currentReaderIndex = readerIndex;
         long currentWriterIndex = (long) WRITER_INDEX_VH.getAcquire(this);
@@ -93,16 +94,16 @@ public class SPSCLockFreeCircularQueue implements SPSCCircularQueue {
         return true;
     }
 
-    public long get() {
+    public MarketData get() {
 
         long currentReaderIndex = readerIndex;
         long currentWriterIndex = (long) WRITER_INDEX_VH.getAcquire(this);
         if (currentReaderIndex == currentWriterIndex) {
-            return -1;
+            return null;
         }
 
         int index = (int) (currentReaderIndex & mask);
-        long msg = elements[index << SLOT_SHIFT];
+        MarketData msg = elements[index << SLOT_SHIFT];
         READER_INDEX_VH.setRelease(this, currentReaderIndex + 1);
         return msg;
     }

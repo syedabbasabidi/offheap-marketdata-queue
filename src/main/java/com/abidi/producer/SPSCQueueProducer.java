@@ -1,5 +1,7 @@
 package com.abidi.producer;
 
+import com.abidi.marketdata.MarketDataFactory;
+import com.abidi.marketdata.model.MarketData;
 import com.abidi.queue.SPSCCircularQueue;
 import net.openhft.affinity.Affinity;
 import org.slf4j.Logger;
@@ -9,18 +11,19 @@ import java.util.Arrays;
 
 public class SPSCQueueProducer implements Runnable {
 
-    private final SPSCCircularQueue queue;
+    private final SPSCCircularQueue<MarketData> queue;
     private final boolean batchedProducer;
+    private final MarketDataFactory marketDataFactory = new MarketDataFactory();
     private static final Logger LOG = LoggerFactory.getLogger(SPSCQueueProducer.class);
     private long messagesProducer = 0;
 
 
-    public SPSCQueueProducer(SPSCCircularQueue queue) {
+    public SPSCQueueProducer(SPSCCircularQueue<MarketData> queue) {
         this.queue = queue;
         this.batchedProducer = false;
     }
 
-    public SPSCQueueProducer(SPSCCircularQueue queue, boolean batchedProducer) {
+    public SPSCQueueProducer(SPSCCircularQueue<MarketData> queue, boolean batchedProducer) {
         this.queue = queue;
         this.batchedProducer = batchedProducer;
     }
@@ -30,9 +33,10 @@ public class SPSCQueueProducer implements Runnable {
         Affinity.setAffinity(0);
 
         if (!batchedProducer) {
+            MarketData marketData = marketDataFactory.create();
             LOG.info("Producer started...");
             while (!Thread.currentThread().isInterrupted()) {
-                if (!queue.add(System.nanoTime())) {
+                if (!queue.add(marketData)) {
                     Thread.onSpinWait();
                 }
                 messagesProducer++;
@@ -40,11 +44,10 @@ public class SPSCQueueProducer implements Runnable {
         } else {
 
             int batchSize = 1000;
-            long[] batchedMessages = new long[batchSize];
+            MarketData[] batchedMessages = new MarketData[batchSize];
+            Arrays.fill(batchedMessages, marketDataFactory.create());
             LOG.info("Starting producer with batched messages...");
             while (!Thread.currentThread().isInterrupted()) {
-                long l = System.nanoTime();
-                Arrays.fill(batchedMessages, l);
                 while (!queue.batchAdd(batchedMessages)) {
                     Thread.onSpinWait();
                 }

@@ -1,15 +1,16 @@
 package com.abidi.queue;
 
+import com.abidi.marketdata.model.MarketData;
 import jdk.internal.vm.annotation.Contended;
 
-public class SPSCVolatileCircularQueue implements SPSCCircularQueue {
+public class SPSCVolatileCircularQueue implements SPSCCircularQueue<MarketData> {
 
     @Contended("readerIndex")  private volatile long readerIndex;
     @Contended("readerIndex") private volatile long writerIndex;
     private static final int SLOT_LONGS = 16;
     private static final int SLOT_SHIFT = 4;
 
-    private final long[] elements;
+    private final MarketData[] elements;
     private final int mask;
     private final int capacity;
 
@@ -21,13 +22,13 @@ public class SPSCVolatileCircularQueue implements SPSCCircularQueue {
 
         readerIndex = 0;
         writerIndex = 0;
-        elements = new long[size * SLOT_LONGS];
+        elements = new MarketData[size * SLOT_LONGS];
         mask = size - 1;
         capacity = size;
     }
 
     @Override
-    public boolean add(long msg) {
+    public boolean add(MarketData msg) {
         long currentWriterIndex = writerIndex;
         if (currentWriterIndex - readerIndex >= capacity) {
             return false;
@@ -39,21 +40,21 @@ public class SPSCVolatileCircularQueue implements SPSCCircularQueue {
     }
 
     @Override
-    public long get() {
+    public MarketData get() {
 
         long currentReaderIndex = readerIndex;
         if (currentReaderIndex == writerIndex) {
-            return -1;
+            return null;
         }
 
         int index = (int) (currentReaderIndex & mask);
-        long msg = elements[index << SLOT_SHIFT];
+        MarketData msg = elements[index << SLOT_SHIFT];
         readerIndex++;
         return msg;
     }
 
     @Override
-    public boolean batchAdd(long[] messages) {
+    public boolean batchAdd(MarketData[] messages) {
 
         long currentWriterIndex = writerIndex;
         int remainingCapacity = (int) (capacity - (currentWriterIndex - readerIndex));
@@ -70,7 +71,7 @@ public class SPSCVolatileCircularQueue implements SPSCCircularQueue {
     }
 
     @Override
-    public boolean batchGet(long[] buffer) {
+    public boolean batchGet(MarketData[] buffer) {
 
         long currentReaderIndex = readerIndex;
         int availableMessages = (int) (writerIndex - currentReaderIndex);

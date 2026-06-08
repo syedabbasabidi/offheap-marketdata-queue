@@ -1,15 +1,17 @@
 package com.abidi.queue;
 
+import com.abidi.marketdata.model.MarketData;
+
 enum JLBHSPSCQueueType {
     VOLATILE {
         @Override
-        SPSCCircularQueue create(int size) {
+        SPSCCircularQueue<MarketData> create(int size) {
             return new SPSCVolatileCircularQueue(size);
         }
     },
     LOCKFREE {
         @Override
-        SPSCCircularQueue create(int size) {
+        SPSCCircularQueue<MarketData> create(int size) {
             return new SPSCLockFreeCircularQueue(size);
         }
     };
@@ -31,5 +33,5 @@ enum JLBHSPSCQueueType {
         }
     }
 
-    abstract SPSCCircularQueue create(int size);
+    abstract SPSCCircularQueue<MarketData> create(int size);
 }

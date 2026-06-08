@@ -1,6 +1,8 @@
 package com.abidi.queue;
 
 import com.abidi.consumer.SPSCQueueConsumer;
+import com.abidi.marketdata.MarketDataFactory;
+import com.abidi.marketdata.model.MarketData;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
 import net.openhft.chronicle.jlbh.JLBHTask;
@@ -15,8 +17,9 @@ public class JLBHSPSCProducerCircularQueue implements JLBHTask {
     public static final int WARM_UP_ITERATIONS = 10_000;
     public static final int QUEUE_SIZE = 65536;
     private JLBH jlbh;
-    private SPSCCircularQueue queue;
+    private SPSCCircularQueue<MarketData> queue;
     private Thread consumerThread;
+    private final MarketData marketData = new MarketDataFactory().create();
     private final JLBHSPSCQueueType queueType;
 
     private static final Logger LOG = LoggerFactory.getLogger(JLBHSPSCProducerCircularQueue.class);
@@ -49,7 +52,7 @@ public class JLBHSPSCProducerCircularQueue implements JLBHTask {
 
     @Override
     public void run(long startTimeNS) {
-        while (!queue.add(startTimeNS)) {
+        while (!queue.add(marketData)) {
             Thread.onSpinWait();
         }
         jlbh.sampleNanos(System.nanoTime() - startTimeNS);

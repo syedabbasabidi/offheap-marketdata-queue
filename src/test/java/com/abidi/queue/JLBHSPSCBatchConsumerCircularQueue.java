@@ -1,5 +1,6 @@
 package com.abidi.queue;
 
+import com.abidi.marketdata.model.MarketData;
 import com.abidi.producer.SPSCQueueProducer;
 import net.openhft.chronicle.jlbh.JLBH;
 import net.openhft.chronicle.jlbh.JLBHOptions;
@@ -16,9 +17,9 @@ public class JLBHSPSCBatchConsumerCircularQueue implements JLBHTask {
     public static final int WARM_UP_ITERATIONS = 100;
     public static final int QUEUE_SIZE = 65536;
     private JLBH jlbh;
-    private SPSCCircularQueue queue;
+    private SPSCCircularQueue<MarketData> queue;
     private Thread producerThread;
-    private final long[] batch = new long[BATCH_SIZE];
+    private final MarketData[] batch = new MarketData[BATCH_SIZE];
     private final JLBHSPSCQueueType queueType;
 
     private static final Logger LOG = LoggerFactory.getLogger(JLBHSPSCBatchConsumerCircularQueue.class);

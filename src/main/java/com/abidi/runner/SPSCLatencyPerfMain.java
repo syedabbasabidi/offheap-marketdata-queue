@@ -1,10 +1,10 @@
 package com.abidi.runner;
 
 import com.abidi.consumer.SPSCQueueConsumer;
+import com.abidi.marketdata.model.MarketData;
 import com.abidi.producer.SPSCQueueProducer;
 import com.abidi.queue.SPSCCircularQueue;
 import com.abidi.queue.SPSCLockFreeCircularQueue;
-import com.abidi.queue.SPSCVolatileCircularQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +17,7 @@ public class SPSCLatencyPerfMain {
         int queueSize = args.length > 0 ? Integer.parseInt(args[0]) : DEFAULT_QUEUE_SIZE;
         validatePowerOfTwo(queueSize);
 
-        SPSCCircularQueue queue = new SPSCLockFreeCircularQueue(queueSize);
+        SPSCCircularQueue<MarketData> queue = new SPSCLockFreeCircularQueue(queueSize);
 
         SPSCQueueProducer producer = new SPSCQueueProducer(queue, false);
         SPSCQueueConsumer consumer = new SPSCQueueConsumer(queue, false);
