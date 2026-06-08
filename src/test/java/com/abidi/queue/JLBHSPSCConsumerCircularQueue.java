@@ -10,10 +10,10 @@ import org.slf4j.LoggerFactory;
 public class JLBHSPSCConsumerCircularQueue implements JLBHTask {
 
     public static final int ITERATIONS = 50_000_000;
-    public static final int THROUGHPUT = 100_000_000;
+    public static final int THROUGHPUT = 10_000_000;
     public static final int RUNS = 5;
     public static final int WARM_UP_ITERATIONS = 10_000;
-    public static final int QUEUE_SIZE = 2;
+    public static final int QUEUE_SIZE = 65536;
     private JLBH jlbh;
     private SPSCCircularQueue queue;
     private Thread producerThread;
@@ -54,7 +54,7 @@ public class JLBHSPSCConsumerCircularQueue implements JLBHTask {
             Thread.onSpinWait();
             msg = queue.get();
         }
-        jlbh.sampleNanos( (System.nanoTime() - 20) - msg );
+        jlbh.sampleNanos( System.nanoTime() - startTimeNS);
     }
 
     @Override

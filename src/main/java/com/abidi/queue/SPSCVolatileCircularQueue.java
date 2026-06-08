@@ -11,6 +11,7 @@ public class SPSCVolatileCircularQueue implements SPSCCircularQueue {
 
     private final long[] elements;
     private final int mask;
+    private final int capacity;
 
     public SPSCVolatileCircularQueue(int size) {
 
@@ -22,12 +23,13 @@ public class SPSCVolatileCircularQueue implements SPSCCircularQueue {
         writerIndex = 0;
         elements = new long[size * SLOT_LONGS];
         mask = size - 1;
+        capacity = size;
     }
 
     @Override
     public boolean add(long msg) {
         long currentWriterIndex = writerIndex;
-        if (currentWriterIndex - readerIndex >= elements.length) {
+        if (currentWriterIndex - readerIndex >= capacity) {
             return false;
         }
         int index = (int) (currentWriterIndex & mask);
@@ -49,6 +51,41 @@ public class SPSCVolatileCircularQueue implements SPSCCircularQueue {
         readerIndex++;
         return msg;
     }
+
+    @Override
+    public boolean batchAdd(long[] messages) {
+
+        long currentWriterIndex = writerIndex;
+        int remainingCapacity = (int) (capacity - (currentWriterIndex - readerIndex));
+        if (messages.length > remainingCapacity) {
+            return false;
+        }
+
+        for (int i = 0; i < messages.length; i++) {
+            int index = (int) ((currentWriterIndex + i) & mask);
+            elements[index << SLOT_SHIFT] = messages[i];
+        }
+        writerIndex += messages.length;
+        return true;
+    }
+
+    @Override
+    public boolean batchGet(long[] buffer) {
+
+        long currentReaderIndex = readerIndex;
+        int availableMessages = (int) (writerIndex - currentReaderIndex);
+        if (availableMessages == 0) {
+            return false;
+        }
+        int toRead = Math.min(buffer.length, availableMessages);
+        for (int i = 0; i < toRead; i++) {
+            int index = (int) ((currentReaderIndex + i) & mask);
+            buffer[i] = elements[index << SLOT_SHIFT];
+        }
+        readerIndex += toRead;
+        return true;
+    }
+
 
 }
 

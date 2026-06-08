@@ -19,8 +19,8 @@ public class SPSCLatencyPerfMain {
 
         SPSCCircularQueue queue = new SPSCLockFreeCircularQueue(queueSize);
 
-        SPSCQueueProducer producer = new SPSCQueueProducer(queue, true);
-        SPSCQueueConsumer consumer = new SPSCQueueConsumer(queue, true);
+        SPSCQueueProducer producer = new SPSCQueueProducer(queue, false);
+        SPSCQueueConsumer consumer = new SPSCQueueConsumer(queue, false);
 
         Thread producerThread = new Thread(producer, "spsc-producer");
         Thread consumerThread = new Thread(consumer, "spsc-consumer");

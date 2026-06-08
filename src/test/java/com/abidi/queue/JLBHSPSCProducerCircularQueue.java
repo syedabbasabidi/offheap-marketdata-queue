@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory;
 public class JLBHSPSCProducerCircularQueue implements JLBHTask {
 
     public static final int ITERATIONS = 50_000_000;
-    public static final int THROUGHPUT = 100_000_000;
-    public static final int RUNS = 10;
+    public static final int THROUGHPUT = 10_000_000;
+    public static final int RUNS = 5;
     public static final int WARM_UP_ITERATIONS = 10_000;
     public static final int QUEUE_SIZE = 65536;
     private JLBH jlbh;
@@ -26,7 +26,7 @@ public class JLBHSPSCProducerCircularQueue implements JLBHTask {
     }
 
     public static void main(String[] args) {
-        JLBHSPSCQueueType queueType = JLBHSPSCQueueType.fromArg(args, JLBHSPSCQueueType.LOCKFREE);
+        JLBHSPSCQueueType queueType = JLBHSPSCQueueType.fromArg(args, JLBHSPSCQueueType.VOLATILE);
         LOG.info("Starting producer-side JLBH with queueType={} queueSize={}", queueType, QUEUE_SIZE);
 
         JLBHOptions jlbhOptions = new JLBHOptions()
