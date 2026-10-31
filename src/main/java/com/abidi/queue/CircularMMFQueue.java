@@ -1,287 +1,76 @@
 package com.abidi.queue;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.Path;
-
-import static java.nio.ByteOrder.BIG_ENDIAN;
-import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
-import static java.nio.file.Files.delete;
 
 /**
- * Off heap circular queue, relies on linux dirty cache page mechanism to persist MMF.
- * Queue tested for single digit micro-second at 99.9 percentile.
- * linux dirty page frequency tuned to 50:
- * <p>
- * sysctl -w vm.dirty_writeback_centisecs=50
- * <p>
- * Disable write caching
- * <p>
- * sudo hdparm -W0 /dev/sdX  # Disable write caching
+ * Single producer / single consumer queue over memory-mapped files; producer and consumer may live in different processes.
+ * <ul>
+ *     <li>{@link CircularMMFQueueFixedSize}: every message occupies one slot of the same size.</li>
+ *     <li>{@link CircularMMFQueueVariableSize}: every message occupies a header plus its own length, so sizes may differ.</li>
+ * </ul>
  */
+public interface CircularMMFQueue extends AutoCloseable {
 
-public class CircularMMFQueue implements AutoCloseable {
+    int DEFAULT_SIZE = 100_000;
 
-    public static final int DEFAULT_SIZE = 100_000;
-    private static final String NAME = "OFF_HEAP_QUEUE";
-    public static final int TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING = 64;
+    /**
+     * @return false if the queue is full
+     */
+    boolean add(byte[] msg);
 
-    private final int msgLength;
-    private final long queueCapacity;
-    private final RandomAccessFile queue;
-    private final RandomAccessFile queueReaderContext;
-    private final MappedByteBuffer[] queueBuffers;
-    private final MappedByteBuffer readerContextBuffer;
-    private final FileChannel queueChannel;
-    private final FileChannel queueReaderContextChannel;
-    private final int numberOfMessagesPerBuffer;
+    /**
+     * @return false if the queue is full
+     */
+    boolean add(byte[] msg, int offset, int length);
 
-    static final VarHandle VH_LONG = MethodHandles.byteBufferViewVarHandle(long[].class, BIG_ENDIAN);
+    /**
+     * Reads and acknowledges the next message, null if empty.
+     */
+    byte[] get();
 
-    private long writeIndex;
-    private long readIndex;
+    /**
+     * Reads the next message without acknowledging it, null if empty or a message awaits {@link #ack()}.
+     */
+    byte[] getWithAck();
 
-    private final byte[] lastDequedMsg;
-    private final String queuePath;
-    private final String queueReaderContextPath;
+    /**
+     * Zero-copy variant of {@link #getWithAck()}: hands the mapped message to the handler, call {@link #ack()} afterwards.
+     *
+     * @return false if empty or a message awaits {@link #ack()}
+     */
+    boolean readWithAck(MessageHandler handler);
 
-    private static final Logger LOG = LoggerFactory.getLogger(CircularMMFQueue.class);
-    private int indexToAck = -1;
+    void ack();
 
-    public CircularMMFQueue(int msgSize, int queueCapacity, String path) throws IOException {
+    /**
+     * @return true if a message of {@link #maxMessageSize()} bytes would be refused
+     */
+    boolean isFull();
 
-        if (msgSize <= 0) {
-            throw new IllegalArgumentException("msgSize must be positive, got " + msgSize);
-        }
-        if (queueCapacity <= 0) {
-            throw new IllegalArgumentException("queueCapacity must be positive, got " + queueCapacity);
-        }
+    boolean isEmpty();
 
-        this.msgLength = msgSize;
-        this.queueCapacity = queueCapacity;
+    int maxMessageSize();
 
-        createDirectoryStructureIfDoesntExist(path);
+    long getQueueSize();
 
-        queuePath = path + "/" + NAME + ".txt";
-        queueReaderContextPath = path + "/" + NAME + "-reader-context.txt";
-        queue = new RandomAccessFile(queuePath, "rw");
-        queueReaderContext = new RandomAccessFile(queueReaderContextPath, "rw");
+    long messagesWritten();
 
-        queueReaderContextChannel = queueReaderContext.getChannel();
-        readerContextBuffer = queueReaderContextChannel.map(READ_WRITE, 0, 8);
-        queueChannel = queue.getChannel();
-        queueBuffers = initializedBuffers(msgSize, queueCapacity);
-        writeIndex = currentWriterIndex();
-        readIndex = currentReaderIndex();
+    long messagesRead();
 
-        lastDequedMsg = new byte[msgSize];
-        numberOfMessagesPerBuffer = Integer.MAX_VALUE / msgSize;
+    void reset();
 
-        if (isReaderIndexAheadOfWriters()) {
-            throw new RuntimeException("Invalid queue state");
-        }
+    void cleanup();
 
-        LOG.info("Queue is setup with size {}, reader is at {}, writer is at {}, queue-size {}", queueCapacity, readIndex, writeIndex, getQueueSize());
-    }
-
-    public byte[] get() {
-
-        if (isEmpty()) return null;
-
-        readNextMessage(nextIndexToReadFrom());
-        updateReaderContext();
-        return lastDequedMsg;
-    }
-
-    public boolean add(byte[] msg) {
-
-        if (msg.length != msgLength) {
-            throw new IllegalArgumentException("Expected message of " + msgLength + " bytes, got " + msg.length);
-        }
-        if (isFull()) return false;
-
-        int bufferIndex = getBufferIndexOf(writeAtIndex());
-        MappedByteBuffer buffer = queueBuffers[bufferIndex];
-        buffer.position(getIndexWithinBuffer(writeAtIndex(), bufferIndex));
-        buffer.put(msg, 0, msg.length);
-        updateWriterContext();
-        return true;
-    }
-
-
-    public byte[] getWithAck() {
-
-        if (isReaderIndexAheadOfWriters()) return null;
-        if (isAMsgAwaitingAck()) return null;
-        if (isEmpty()) return null;
-
-        int nextIndexToReadFrom = nextIndexToReadFrom();
-        indexToAck = nextIndexToReadFrom;
-        readNextMessage(nextIndexToReadFrom);
-        return lastDequedMsg;
-    }
-
-
-    private void readNextMessage(int nextIndexToReadFrom) {
-        int bufferIndex = getBufferIndexOf(nextIndexToReadFrom);
-        MappedByteBuffer buffer = queueBuffers[bufferIndex];
-        buffer.position(getIndexWithinBuffer(nextIndexToReadFrom, bufferIndex));
-        buffer.get(lastDequedMsg, 0, msgLength);
-    }
-
-    public boolean isFull() {
-        return (writeIndex - currentReaderIndex()) >= queueCapacity;
-    }
-
-    public boolean isEmpty() {
-        return readIndex >= currentWriterIndex();
-    }
-
-    private boolean isReaderIndexAheadOfWriters() {
-        if (currentReaderIndex() > currentWriterIndex()) {
-            LOG.error("Queue is invalid state, reader seems to have read more messages than written");
-            return true;
-        }
-        return false;
-    }
-
-    private boolean isAMsgAwaitingAck() {
-        if (indexToAck != -1) {
-            LOG.info("Index {} hasn't been acked yet", indexToAck);
-            return true;
-        }
-        return false;
-    }
-
-    public void ack() {
-        if (indexToAck == nextIndexToReadFrom()) {
-            updateReaderContext();
-            indexToAck = -1;
-        }
-    }
-
-    private int nextIndexToReadFrom() {
-        return (int) (readIndex % queueCapacity);
-    }
-
-    private int writeAtIndex() {
-        return (int) (writeIndex % queueCapacity);
-    }
-
-
-    private int getBufferIndexOf(int index) {
-        int ret = index / numberOfMessagesPerBuffer;
-        if (ret >= queueBuffers.length) {
-            throw new IndexOutOfBoundsException("Index doesn't exist");
-        }
-
-        return ret;
-    }
-
-    private int getIndexWithinBuffer(int index, int bufferIndex) {
-        int indexWithinBuffer = (index % numberOfMessagesPerBuffer) * msgLength;
-        return bufferIndex == 0 ? indexWithinBuffer + TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING : indexWithinBuffer;
-    }
-
-
-    private void updateReaderContext() {
-        VH_LONG.setOpaque(readerContextBuffer, 0, readIndex + 1);
-        readIndex++;
-    }
-
-    private long currentReaderIndex() {
-        return (long) VH_LONG.getOpaque(readerContextBuffer, 0);
-    }
-
-    private void updateWriterContext() {
-        MappedByteBuffer firstQueueBuffer = queueBuffers[0];
-        VH_LONG.setRelease(firstQueueBuffer, 0, writeIndex + 1);
-        writeIndex++;
-    }
-
-    private long currentWriterIndex() {
-        return (long) VH_LONG.getAcquire(queueBuffers[0], 0);
-    }
-
-    public static CircularMMFQueue getInstance(int msgSize, String path) throws IOException {
-        return new CircularMMFQueue(msgSize, DEFAULT_SIZE, path);
-    }
-
-    public static CircularMMFQueue getInstance(int msgSize, int queueSize, String path) throws IOException {
-        return new CircularMMFQueue(msgSize, queueSize, path);
-    }
-
-    public long getQueueSize() {
-        return currentWriterIndex() - currentReaderIndex();
-    }
-
-    public long messagesWritten() {
-        return currentWriterIndex();
-    }
-
-    public long messagesRead() {
-        return currentReaderIndex();
-    }
-
-    private MappedByteBuffer[] initializedBuffers(long msgSize, int queueCapacity) throws IOException {
-
-        long totalBytesRequiredToAccommodateCapacity = msgSize * queueCapacity;
-        totalBytesRequiredToAccommodateCapacity += TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING; //first X bytes reserved for writer's sequence
-        int numberOfBuffers = (int) Math.ceil((double) totalBytesRequiredToAccommodateCapacity / (double) Integer.MAX_VALUE);
-        MappedByteBuffer[] queueBuffers = new MappedByteBuffer[numberOfBuffers];
-
-        for (int i = 0; i < numberOfBuffers; i++) {
-            queueBuffers[i] = queueChannel.map(READ_WRITE, (long) i * Integer.MAX_VALUE, Integer.MAX_VALUE);
-        }
-        return queueBuffers;
-    }
-
-    private static void createDirectoryStructureIfDoesntExist(String path) throws IOException {
-        File dir = new File(path);
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new IOException(String.format("Failed to create directory structure %s", path));
-        }
-    }
-
-    public void reset() {
-        this.readIndex = 0;
-        this.writeIndex = 0;
-        this.indexToAck = -1;
-        VH_LONG.setOpaque(readerContextBuffer, 0, readIndex);
-        VH_LONG.setRelease(queueBuffers[0], 0, writeIndex);
-    }
-
-    public void cleanup() {
-        try {
-            closeQueue();
-            delete(Path.of(queuePath));
-            delete(Path.of(queueReaderContextPath));
-        } catch (IOException e) {
-            LOG.error("Failed to delete underlying files", e);
-        }
-    }
-
-    public void closeQueue() {
-        try {
-            queueChannel.close();
-            queueReaderContextChannel.close();
-            queue.close();
-            queueReaderContext.close();
-        } catch (IOException e) {
-            LOG.error("Failed to close underlying file", e);
-        }
-    }
+    void closeQueue();
 
     @Override
-    public void close() {
-        closeQueue();
+    void close();
+
+    static CircularMMFQueue getInstance(int msgSize, String path) throws IOException {
+        return new CircularMMFQueueFixedSize(msgSize, DEFAULT_SIZE, path);
+    }
+
+    static CircularMMFQueue getInstance(int msgSize, int queueSize, String path) throws IOException {
+        return new CircularMMFQueueFixedSize(msgSize, queueSize, path);
     }
 }

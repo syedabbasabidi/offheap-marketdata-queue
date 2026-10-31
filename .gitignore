@@ -1,0 +1,7 @@
+target/
+.idea/
+*.iml
+hs_err_pid*.log
+gclog.txt
+.attach_pid*
+OFF_HEAP_*.txt
