@@ -112,9 +112,6 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
         return add(msg, 0, msg.length);
     }
 
-    /**
-     * Writes {@code length} bytes into the next slot; the rest of the slot is left as is.
-     */
     @Override
     public boolean add(byte[] msg, int offset, int length) {
 
@@ -131,9 +128,6 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
         return true;
     }
 
-    /**
-     * Zero-copy variant of {@link #getWithAck()}: hands the mapped slot to the handler, call {@link #ack()} afterwards.
-     */
     @Override
     public boolean readWithAck(MessageHandler handler) {
 
@@ -265,19 +259,16 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
         return currentReaderIndex();
     }
 
-    /**
-     * Slots start after the writer context and never straddle two buffers; only the bytes needed are mapped.
-     */
     private MappedByteBuffer[] initializedBuffers(long msgSize, int queueCapacity) throws IOException {
 
         int numberOfBuffers = (queueCapacity + numberOfMessagesPerBuffer - 1) / numberOfMessagesPerBuffer;
         MappedByteBuffer[] queueBuffers = new MappedByteBuffer[numberOfBuffers];
         long bytesPerBuffer = msgSize * numberOfMessagesPerBuffer;
 
-        for (int i = 0; i < numberOfBuffers; i++) {
-            int messagesInBuffer = Math.min(numberOfMessagesPerBuffer, queueCapacity - i * numberOfMessagesPerBuffer);
-            long offset = TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING + i * bytesPerBuffer;
-            queueBuffers[i] = queueChannel.map(READ_WRITE, offset, msgSize * messagesInBuffer);
+        for (int bufferIndex = 0; bufferIndex < numberOfBuffers; bufferIndex++) {
+            int messagesInBuffer = Math.min(numberOfMessagesPerBuffer, queueCapacity - bufferIndex * numberOfMessagesPerBuffer);
+            long bufferStartInFile = TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING + bufferIndex * bytesPerBuffer;
+            queueBuffers[bufferIndex] = queueChannel.map(READ_WRITE, bufferStartInFile, msgSize * messagesInBuffer);
         }
         return queueBuffers;
     }

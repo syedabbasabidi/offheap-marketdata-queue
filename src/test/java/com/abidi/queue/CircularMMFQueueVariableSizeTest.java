@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CircularMMFQueueVariableSizeTest {
 
     private static final String PATH = "/tmp/test-mmf-variable";
-    private static final int MAX = 100;
+    private static final int MAX_MESSAGE_SIZE = 100;
     private static final int CAPACITY = 1024;
 
     private CircularMMFQueue queue;
@@ -25,14 +25,18 @@ class CircularMMFQueueVariableSizeTest {
         }
     }
 
-    private CircularMMFQueue open() throws IOException {
-        return new CircularMMFQueueVariableSize(MAX, CAPACITY, PATH);
+    private CircularMMFQueue openQueue() throws IOException {
+        return new CircularMMFQueueVariableSize(MAX_MESSAGE_SIZE, CAPACITY, PATH);
     }
 
-    private CircularMMFQueue fresh() throws IOException {
-        queue = open();
+    private CircularMMFQueue openEmptyQueue() throws IOException {
+        queue = openQueue();
         queue.reset();
         return queue;
+    }
+
+    private static int lengthOfMessage(int i) {
+        return 2 + i % (MAX_MESSAGE_SIZE - 1);
     }
 
     private static byte[] bytes(String s) {
@@ -41,20 +45,20 @@ class CircularMMFQueueVariableSizeTest {
 
     @Test
     void messagesKeepTheirOwnLength() throws IOException {
-        fresh();
+        openEmptyQueue();
         assertTrue(queue.add(bytes("a")));
         assertTrue(queue.add(bytes("three")));
-        assertTrue(queue.add(new byte[MAX]));
+        assertTrue(queue.add(new byte[MAX_MESSAGE_SIZE]));
 
         assertArrayEquals(bytes("a"), queue.get());
-        int[] seen = new int[2];
+        int[] lengthAndFirstByte = new int[2];
         assertTrue(queue.readWithAck((buffer, offset, length) -> {
-            seen[0] = length;
-            seen[1] = buffer.get(offset);
+            lengthAndFirstByte[0] = length;
+            lengthAndFirstByte[1] = buffer.get(offset);
         }));
         queue.ack();
-        assertArrayEquals(new int[]{5, 't'}, seen);
-        assertEquals(MAX, queue.get().length);
+        assertArrayEquals(new int[]{5, 't'}, lengthAndFirstByte);
+        assertEquals(MAX_MESSAGE_SIZE, queue.get().length);
         assertNull(queue.get());
         assertEquals(3, queue.messagesWritten());
         assertEquals(3, queue.messagesRead());
@@ -62,25 +66,26 @@ class CircularMMFQueueVariableSizeTest {
 
     @Test
     void wrapsWithPaddingAndRefusesWhenFullUntilRead() throws IOException {
-        fresh();
+        openEmptyQueue();
         Random random = new Random(42);
-        ArrayDeque<byte[]> pending = new ArrayDeque<>();
+        ArrayDeque<byte[]> writtenNotRead = new ArrayDeque<>();
         long written = 0;
         long read = 0;
         for (int i = 0; i < 20_000; i++) {
-            byte[] msg = new byte[1 + random.nextInt(MAX)];
+            byte[] msg = new byte[1 + random.nextInt(MAX_MESSAGE_SIZE)];
             random.nextBytes(msg);
             if (queue.add(msg)) {
-                pending.add(msg);
+                writtenNotRead.add(msg);
                 written++;
             } else {
                 assertTrue(queue.isFull());
-                assertFalse(pending.isEmpty(), "refused an empty queue");
+                assertFalse(writtenNotRead.isEmpty(), "refused an empty queue");
             }
-            if (random.nextInt(3) == 0 || !pending.isEmpty() && pending.size() > 8) {
+            boolean readerTakesATurn = random.nextInt(3) == 0 || writtenNotRead.size() > 8;
+            if (readerTakesATurn) {
                 byte[] got = queue.get();
                 if (got != null) {
-                    assertArrayEquals(pending.poll(), got);
+                    assertArrayEquals(writtenNotRead.poll(), got);
                     read++;
                 }
             }
@@ -93,7 +98,7 @@ class CircularMMFQueueVariableSizeTest {
 
     @Test
     void reopenResumesCountsAndRedeliversUnackedMessage() throws IOException {
-        fresh();
+        openEmptyQueue();
         for (int i = 0; i < 30; i++) {
             assertTrue(queue.add(bytes("m" + i)));
             assertNotNull(queue.get());
@@ -107,7 +112,7 @@ class CircularMMFQueueVariableSizeTest {
         assertArrayEquals(bytes("unacked"), queue.getWithAck());
         queue.close();
 
-        queue = open();
+        queue = openQueue();
         assertEquals(33, queue.messagesWritten());
         assertEquals(31, queue.messagesRead());
         assertArrayEquals(bytes("unacked"), queue.get());
@@ -119,13 +124,13 @@ class CircularMMFQueueVariableSizeTest {
 
     @Test
     void producerAndConsumerOnSeparateThreadsAndMappings() throws Exception {
-        fresh();
-        int count = 1_000_000;
+        openEmptyQueue();
+        int messageCount = 1_000_000;
         Thread producer = new Thread(() -> {
-            try (CircularMMFQueue writer = open()) {
-                byte[] msg = new byte[MAX];
-                for (int i = 0; i < count; i++) {
-                    int length = 2 + i % (MAX - 1);
+            try (CircularMMFQueue writer = openQueue()) {
+                byte[] msg = new byte[MAX_MESSAGE_SIZE];
+                for (int i = 0; i < messageCount; i++) {
+                    int length = lengthOfMessage(i);
                     msg[0] = (byte) i;
                     msg[length - 1] = (byte) (i >> 8);
                     while (!writer.add(msg, 0, length)) {
@@ -137,32 +142,32 @@ class CircularMMFQueueVariableSizeTest {
             }
         });
         producer.start();
-        int[] next = {0};
-        try (CircularMMFQueue reader = open()) {
-            while (next[0] < count) {
+        int[] messagesConsumed = {0};
+        try (CircularMMFQueue reader = openQueue()) {
+            while (messagesConsumed[0] < messageCount) {
                 if (reader.readWithAck((buffer, offset, length) -> {
-                    int i = next[0];
-                    assertEquals(2 + i % (MAX - 1), length);
+                    int i = messagesConsumed[0];
+                    assertEquals(lengthOfMessage(i), length);
                     assertEquals((byte) i, buffer.get(offset));
                     assertEquals((byte) (i >> 8), buffer.get(offset + length - 1));
                 })) {
                     reader.ack();
-                    next[0]++;
+                    messagesConsumed[0]++;
                 }
             }
-            assertEquals(count, reader.messagesRead());
+            assertEquals(messageCount, reader.messagesRead());
         }
         producer.join();
-        assertEquals(count, queue.messagesWritten());
+        assertEquals(messageCount, queue.messagesWritten());
     }
 
     @Test
     void rejectsBadSizesAndMismatchedReopen() throws IOException {
-        fresh();
-        assertThrows(IllegalArgumentException.class, () -> queue.add(new byte[MAX + 1]));
+        openEmptyQueue();
+        assertThrows(IllegalArgumentException.class, () -> queue.add(new byte[MAX_MESSAGE_SIZE + 1]));
         assertThrows(IllegalArgumentException.class, () -> queue.add(new byte[0]));
-        assertThrows(IllegalStateException.class, () -> new CircularMMFQueueVariableSize(MAX, CAPACITY * 2, PATH));
-        assertThrows(IllegalArgumentException.class, () -> new CircularMMFQueueVariableSize(MAX, 1000, PATH + "-x"));
+        assertThrows(IllegalStateException.class, () -> new CircularMMFQueueVariableSize(MAX_MESSAGE_SIZE, CAPACITY * 2, PATH));
+        assertThrows(IllegalArgumentException.class, () -> new CircularMMFQueueVariableSize(MAX_MESSAGE_SIZE, 1000, PATH + "-x"));
         assertThrows(IllegalArgumentException.class, () -> new CircularMMFQueueVariableSize(CAPACITY / 2, CAPACITY, PATH + "-x"));
     }
 }
