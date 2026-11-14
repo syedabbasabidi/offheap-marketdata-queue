@@ -46,11 +46,17 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
     private final MappedByteBuffer readerContextBuffer;
     private final FileChannel queueChannel;
     private final int numberOfMessagesPerBuffer;
+    private final int bufferIndexShift;
 
     static final VarHandle VH_LONG = MethodHandles.byteBufferViewVarHandle(long[].class, BIG_ENDIAN);
 
     private long writeIndex;
+    private int writeSlot;
+    private long lastSeenReaderIndex;
+
     private long readIndex;
+    private int readSlot;
+    private long lastSeenWriterIndex;
 
     private final byte[] lastDequedMsg;
     private final String queuePath;
@@ -79,10 +85,15 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
         writerContextBuffer = queueChannel.map(READ_WRITE, 0, TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING);
         readerContextBuffer = queueChannel.map(READ_WRITE, READER_CONTEXT_OFFSET, READER_CONTEXT_BYTES);
         rememberSizesOnFirstOpenElseRequireSameSizes();
-        numberOfMessagesPerBuffer = Integer.MAX_VALUE / msgSize;
+        numberOfMessagesPerBuffer = Integer.highestOneBit(Integer.MAX_VALUE / msgSize);
+        bufferIndexShift = Integer.numberOfTrailingZeros(numberOfMessagesPerBuffer);
         queueBuffers = initializedBuffers(msgSize, queueCapacity);
         writeIndex = currentWriterIndex();
+        writeSlot = (int) (writeIndex % queueCapacity);
+        lastSeenReaderIndex = currentReaderIndex();
         readIndex = currentReaderIndex();
+        readSlot = (int) (readIndex % queueCapacity);
+        lastSeenWriterIndex = writeIndex;
 
         lastDequedMsg = new byte[msgSize];
 
@@ -96,9 +107,9 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
     @Override
     public byte[] get() {
 
-        if (isEmpty()) return null;
+        if (!writerIsAheadOfReader()) return null;
 
-        readNextMessage(nextIndexToReadFrom());
+        readNextMessage();
         updateReaderContext();
         return lastDequedMsg;
     }
@@ -118,11 +129,10 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
         if (length <= 0 || length > msgLength) {
             throw new IllegalArgumentException("Expected 1 to " + msgLength + " bytes, got " + length);
         }
-        if (isFull()) return false;
+        if (!readerHasFreedASlot()) return false;
 
-        int bufferIndex = getBufferIndexOf(writeAtIndex());
-        MappedByteBuffer buffer = queueBuffers[bufferIndex];
-        buffer.position(getIndexWithinBuffer(writeAtIndex(), bufferIndex));
+        MappedByteBuffer buffer = queueBuffers[getBufferIndexOf(writeSlot)];
+        buffer.position(getIndexWithinBuffer(writeSlot));
         buffer.put(msg, offset, length);
         updateWriterContext();
         return true;
@@ -131,14 +141,11 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
     @Override
     public boolean readWithAck(MessageHandler handler) {
 
-        if (isReaderIndexAheadOfWriters()) return false;
         if (isAMsgAwaitingAck()) return false;
-        if (isEmpty()) return false;
+        if (!writerIsAheadOfReader()) return false;
 
-        int nextIndexToReadFrom = nextIndexToReadFrom();
-        indexToAck = nextIndexToReadFrom;
-        int bufferIndex = getBufferIndexOf(nextIndexToReadFrom);
-        handler.onMessage(queueBuffers[bufferIndex], getIndexWithinBuffer(nextIndexToReadFrom, bufferIndex), msgLength);
+        indexToAck = readSlot;
+        handler.onMessage(queueBuffers[getBufferIndexOf(readSlot)], getIndexWithinBuffer(readSlot), msgLength);
         return true;
     }
 
@@ -146,22 +153,31 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
     @Override
     public byte[] getWithAck() {
 
-        if (isReaderIndexAheadOfWriters()) return null;
         if (isAMsgAwaitingAck()) return null;
-        if (isEmpty()) return null;
+        if (!writerIsAheadOfReader()) return null;
 
-        int nextIndexToReadFrom = nextIndexToReadFrom();
-        indexToAck = nextIndexToReadFrom;
-        readNextMessage(nextIndexToReadFrom);
+        indexToAck = readSlot;
+        readNextMessage();
         return lastDequedMsg;
     }
 
 
-    private void readNextMessage(int nextIndexToReadFrom) {
-        int bufferIndex = getBufferIndexOf(nextIndexToReadFrom);
-        MappedByteBuffer buffer = queueBuffers[bufferIndex];
-        buffer.position(getIndexWithinBuffer(nextIndexToReadFrom, bufferIndex));
+    private void readNextMessage() {
+        MappedByteBuffer buffer = queueBuffers[getBufferIndexOf(readSlot)];
+        buffer.position(getIndexWithinBuffer(readSlot));
         buffer.get(lastDequedMsg, 0, msgLength);
+    }
+
+    private boolean readerHasFreedASlot() {
+        if (writeIndex - lastSeenReaderIndex < queueCapacity) return true;
+        lastSeenReaderIndex = currentReaderIndex();
+        return writeIndex - lastSeenReaderIndex < queueCapacity;
+    }
+
+    private boolean writerIsAheadOfReader() {
+        if (readIndex < lastSeenWriterIndex) return true;
+        lastSeenWriterIndex = currentWriterIndex();
+        return readIndex < lastSeenWriterIndex;
     }
 
     @Override
@@ -192,38 +208,30 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
 
     @Override
     public void ack() {
-        if (indexToAck == nextIndexToReadFrom()) {
+        if (indexToAck == readSlot) {
             updateReaderContext();
             indexToAck = -1;
         }
     }
 
-    private int nextIndexToReadFrom() {
-        return (int) (readIndex % queueCapacity);
+    private int nextSlot(int slot) {
+        int next = slot + 1;
+        return next == queueCapacity ? 0 : next;
     }
 
-    private int writeAtIndex() {
-        return (int) (writeIndex % queueCapacity);
+    private int getBufferIndexOf(int slot) {
+        return slot >>> bufferIndexShift;
     }
 
-
-    private int getBufferIndexOf(int index) {
-        int ret = index / numberOfMessagesPerBuffer;
-        if (ret >= queueBuffers.length) {
-            throw new IndexOutOfBoundsException("Index doesn't exist");
-        }
-
-        return ret;
-    }
-
-    private int getIndexWithinBuffer(int index, int bufferIndex) {
-        return (index - bufferIndex * numberOfMessagesPerBuffer) * msgLength;
+    private int getIndexWithinBuffer(int slot) {
+        return (slot & (numberOfMessagesPerBuffer - 1)) * msgLength;
     }
 
 
     private void updateReaderContext() {
         VH_LONG.setRelease(readerContextBuffer, 0, readIndex + 1);
         readIndex++;
+        readSlot = nextSlot(readSlot);
     }
 
     private long currentReaderIndex() {
@@ -233,6 +241,7 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
     private void updateWriterContext() {
         VH_LONG.setRelease(writerContextBuffer, 0, writeIndex + 1);
         writeIndex++;
+        writeSlot = nextSlot(writeSlot);
     }
 
     private long currentWriterIndex() {
@@ -299,7 +308,11 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
     @Override
     public void reset() {
         this.readIndex = 0;
+        this.readSlot = 0;
+        this.lastSeenWriterIndex = 0;
         this.writeIndex = 0;
+        this.writeSlot = 0;
+        this.lastSeenReaderIndex = 0;
         this.indexToAck = -1;
         VH_LONG.setRelease(readerContextBuffer, 0, readIndex);
         VH_LONG.setRelease(writerContextBuffer, 0, writeIndex);
