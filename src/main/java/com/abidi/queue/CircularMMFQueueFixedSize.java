@@ -32,16 +32,19 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
 
     private static final String NAME = "OFF_HEAP_QUEUE";
     public static final int TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING = 64;
+    private static final int MSG_SIZE_IN_CONTEXT = 8;
+    private static final int CAPACITY_IN_CONTEXT = 16;
+    private static final int READER_CONTEXT_OFFSET = 64;
+    private static final int READER_CONTEXT_BYTES = 64;
+    private static final int RING_OFFSET = READER_CONTEXT_OFFSET + READER_CONTEXT_BYTES;
 
     private final int msgLength;
     private final long queueCapacity;
     private final RandomAccessFile queue;
-    private final RandomAccessFile queueReaderContext;
     private final MappedByteBuffer writerContextBuffer;
     private final MappedByteBuffer[] queueBuffers;
     private final MappedByteBuffer readerContextBuffer;
     private final FileChannel queueChannel;
-    private final FileChannel queueReaderContextChannel;
     private final int numberOfMessagesPerBuffer;
 
     static final VarHandle VH_LONG = MethodHandles.byteBufferViewVarHandle(long[].class, BIG_ENDIAN);
@@ -51,7 +54,6 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
 
     private final byte[] lastDequedMsg;
     private final String queuePath;
-    private final String queueReaderContextPath;
 
     private static final Logger LOG = LoggerFactory.getLogger(CircularMMFQueueFixedSize.class);
     private int indexToAck = -1;
@@ -71,14 +73,12 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
         createDirectoryStructureIfDoesntExist(path);
 
         queuePath = path + "/" + NAME + ".txt";
-        queueReaderContextPath = path + "/" + NAME + "-reader-context.txt";
         queue = new RandomAccessFile(queuePath, "rw");
-        queueReaderContext = new RandomAccessFile(queueReaderContextPath, "rw");
 
-        queueReaderContextChannel = queueReaderContext.getChannel();
-        readerContextBuffer = queueReaderContextChannel.map(READ_WRITE, 0, 8);
         queueChannel = queue.getChannel();
         writerContextBuffer = queueChannel.map(READ_WRITE, 0, TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING);
+        readerContextBuffer = queueChannel.map(READ_WRITE, READER_CONTEXT_OFFSET, READER_CONTEXT_BYTES);
+        rememberSizesOnFirstOpenElseRequireSameSizes();
         numberOfMessagesPerBuffer = Integer.MAX_VALUE / msgSize;
         queueBuffers = initializedBuffers(msgSize, queueCapacity);
         writeIndex = currentWriterIndex();
@@ -259,6 +259,22 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
         return currentReaderIndex();
     }
 
+    private void rememberSizesOnFirstOpenElseRequireSameSizes() throws IOException {
+        long storedMsgSize = writerContextBuffer.getLong(MSG_SIZE_IN_CONTEXT);
+        long storedCapacity = writerContextBuffer.getLong(CAPACITY_IN_CONTEXT);
+        boolean firstOpen = storedMsgSize == 0;
+        if (firstOpen) {
+            writerContextBuffer.putLong(MSG_SIZE_IN_CONTEXT, msgLength);
+            writerContextBuffer.putLong(CAPACITY_IN_CONTEXT, queueCapacity);
+            return;
+        }
+        if (storedMsgSize != msgLength || storedCapacity != queueCapacity) {
+            closeQueue();
+            throw new IllegalStateException(queuePath + " was created with msgSize " + storedMsgSize
+                    + " and capacity " + storedCapacity + ", opened with " + msgLength + " and " + queueCapacity);
+        }
+    }
+
     private MappedByteBuffer[] initializedBuffers(long msgSize, int queueCapacity) throws IOException {
 
         int numberOfBuffers = (queueCapacity + numberOfMessagesPerBuffer - 1) / numberOfMessagesPerBuffer;
@@ -267,7 +283,7 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
 
         for (int bufferIndex = 0; bufferIndex < numberOfBuffers; bufferIndex++) {
             int messagesInBuffer = Math.min(numberOfMessagesPerBuffer, queueCapacity - bufferIndex * numberOfMessagesPerBuffer);
-            long bufferStartInFile = TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING + bufferIndex * bytesPerBuffer;
+            long bufferStartInFile = RING_OFFSET + bufferIndex * bytesPerBuffer;
             queueBuffers[bufferIndex] = queueChannel.map(READ_WRITE, bufferStartInFile, msgSize * messagesInBuffer);
         }
         return queueBuffers;
@@ -294,7 +310,6 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
         try {
             closeQueue();
             delete(Path.of(queuePath));
-            delete(Path.of(queueReaderContextPath));
         } catch (IOException e) {
             LOG.error("Failed to delete underlying files", e);
         }
@@ -304,9 +319,7 @@ public class CircularMMFQueueFixedSize implements CircularMMFQueue {
     public void closeQueue() {
         try {
             queueChannel.close();
-            queueReaderContextChannel.close();
             queue.close();
-            queueReaderContext.close();
         } catch (IOException e) {
             LOG.error("Failed to close underlying file", e);
         }

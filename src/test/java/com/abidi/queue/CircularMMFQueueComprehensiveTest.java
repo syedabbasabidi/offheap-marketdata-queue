@@ -627,6 +627,23 @@ public class CircularMMFQueueComprehensiveTest {
         }
     }
 
+    @Test
+    @DisplayName("Reopening with different msgSize or capacity fails fast")
+    void reopenWithDifferentSizesFails() throws IOException {
+        String path = "/tmp/test-mmf-size-validation";
+        CircularMMFQueue q = new CircularMMFQueueFixedSize(MSG_SIZE, QUEUE_CAPACITY, path);
+        q.reset();
+        q.close();
+
+        assertThrows(IllegalStateException.class,
+                () -> new CircularMMFQueueFixedSize(MSG_SIZE * 2, QUEUE_CAPACITY, path));
+        assertThrows(IllegalStateException.class,
+                () -> new CircularMMFQueueFixedSize(MSG_SIZE, QUEUE_CAPACITY * 2, path));
+
+        CircularMMFQueue reopened = new CircularMMFQueueFixedSize(MSG_SIZE, QUEUE_CAPACITY, path);
+        reopened.cleanup();
+    }
+
     // -----------------------------------------------------------------------
     //  Edge cases
     // -----------------------------------------------------------------------
@@ -775,9 +792,9 @@ public class CircularMMFQueueComprehensiveTest {
     }
 
     @Test
-    @DisplayName("Only header plus capacity * msgSize bytes are mapped")
+    @DisplayName("Only contexts plus capacity * msgSize bytes are mapped")
     void mapsOnlyWhatIsNeeded() {
-        assertEquals(CircularMMFQueueFixedSize.TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING + (long) MSG_SIZE * QUEUE_CAPACITY,
+        assertEquals(2L * CircularMMFQueueFixedSize.TOTAL_BYTES_REQUIRED_FOR_WRITER_CONTEXT_WITH_PADDING + (long) MSG_SIZE * QUEUE_CAPACITY,
                 new java.io.File(QUEUE_PATH + "/OFF_HEAP_QUEUE.txt").length());
     }
 }
